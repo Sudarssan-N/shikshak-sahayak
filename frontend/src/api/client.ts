@@ -116,7 +116,8 @@ export const api = {
     request<DailyRecord>(`/api/records/${id}/corrections`, { method: "POST", body: json({ text }) }),
   correctByAudio: (id: string, audio: Blob) => {
     const fd = new FormData();
-    fd.append("audio", audio, "correction.webm");
+    const ext = audio.type.includes("ogg") ? "ogg" : audio.type.includes("mp4") ? "m4a" : "webm";
+    fd.append("audio", audio, `correction.${ext}`);
     return request<DailyRecord>(`/api/records/${id}/corrections`, { method: "POST", body: fd });
   },
   resolveName: (id: string, spoken: string, studentId: string | null) =>

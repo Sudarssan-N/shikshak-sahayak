@@ -1,0 +1,58 @@
+# Validation rules (PRD §Validation rules engine). Severity and wording are data: a state's variation changes this
+# file, not code. The check for each id lives in engine.py. Placeholders come from the record context.
+# severity: block = cannot confirm until fixed · warn = teacher may confirm anyway · info = nudge
+- id: V1
+  severity: block
+  field: present
+  message: "You said {present} present but {klass} has {enrolled} enrolled."
+- id: V2
+  severity: warn
+  field: absent
+  message: "{present} present and {absent} absent make {sum}, but {klass} has {enrolled} enrolled. Who is missing?"
+- id: V3
+  severity: warn
+  field: meals_served
+  message: "{meals_served} meals served but only {present} present in {klass}."
+- id: V4
+  severity: block
+  field: absent
+  message: "I could not find '{spoken}' in {klass}. {question}"
+- id: V5
+  severity: warn
+  field: record_date
+  message: "{klass} is already recorded for {date}. Confirming will replace it."
+- id: V6
+  severity: block
+  field: record_date
+  message: "{date} is in the future. Which day is this for?"
+- id: V6b
+  severity: warn
+  field: record_date
+  message: "{date} is {reason}. Is this the right day?"
+  params: {max_days_back: 7}
+- id: V7
+  severity: warn
+  field: lessons
+  message: "Last time {klass} reached lesson {last}. Is lesson {now} right?"
+- id: V8
+  severity: info
+  field: record_date
+  message: "No record for {klass} on {gap_day}. You can add it with another note."
+- id: V9
+  severity: warn
+  field: present
+  message: "{reason}"
+  params: {max_class_size: 100}
+- id: V10
+  severity: warn
+  field: "{field}"
+  message: "I am not sure about {label}. Please check {value} is right."
+  params: {min_confidence: 0.7}
+- id: V11
+  severity: block
+  field: present
+  message: "I did not hear how many children were present in {klass}. Please say or enter it."
+- id: V12
+  severity: warn
+  field: absent
+  message: "You said {absent_count} absent but named {named} in {klass}."

@@ -1,0 +1,27 @@
+# Generic register template. A state adds templates/<state>/template.yaml with its own labels and CSV column order;
+# the generator reads this file and contains no format-specific logic beyond grid layout.
+name: Generic (pilot)
+footer: "Prepared from the teacher's confirmed voice records by Shikshak Sahayak on {generated}."
+attendance:
+  title: "Attendance Register / उपस्थिति रजिस्टर"
+  present_mark: "P"
+  absent_mark: "A"
+  columns_left: ["Roll No", "Name"]
+  columns_right: ["Days present", "Days absent"]
+mdm:
+  title: "Mid-Day Meal Register / मध्याह्न भोजन रजिस्टर"
+  columns: ["Date", "Class", "Enrolled", "Present", "Meals served"]
+summary:
+  title: "Monthly Summary"
+csv:
+  # (header, record field) in the order the block office / portal expects
+  columns:
+    - [udise_code, udise_code]
+    - [date, record_date]
+    - [class, grade]
+    - [section, section]
+    - [enrolled, enrolled]
+    - [present, present]
+    - [absent, absent]
+    - [meals_served, meals_served]
+    - [lessons, lessons]

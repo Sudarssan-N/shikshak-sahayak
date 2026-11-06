@@ -75,6 +75,7 @@ export interface DailyRecord {
   enrolled: number | null; // from roster, never from the model
   present: number | null;
   absent: AbsentStudent[];
+  absent_count: number | null; // "4 absent" as spoken; may differ from absent.length (rule V12)
   unresolved_names: UnresolvedName[];
   meals_served: number | null;
   lessons: LessonProgress[];
