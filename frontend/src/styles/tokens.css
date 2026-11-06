@@ -1,31 +1,40 @@
 /* Design tokens. Every feature uses these variables; never hard-code colours. */
 :root {
   --font: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
 
-  --bg: #f6f4ee;          /* warm paper */
+  /* "Chalkboard & Marigold" */
+  --bg: #f7f3ea;          /* warm paper */
   --surface: #ffffff;
-  --surface-2: #efece3;
-  --border: #ddd8cb;
-  --text: #1d2420;
-  --text-2: #5b645e;
-  --brand: #0f5c4d;       /* deep teal-green, chalkboard */
+  --surface-2: #f1ede3;
+  --border: #e4ddcd;
+  --border-strong: #d8d1bf;
+  --text: #17201c;
+  --text-2: #56605a;
+  --ink: #0e3b32;         /* chalkboard: hero bands, nav, primary buttons */
+  --ink-text: #ffffff;
+  --ink-muted: #cfe3dc;
+  --brand: #14594a;
   --brand-ink: #ffffff;
-  --brand-soft: #dcefe9;
-  --accent: #e8a33d;      /* marigold */
-  --accent-soft: #fbedd5;
-  --good: #1f7a46;
-  --good-soft: #def2e5;
-  --warn: #9a5b00;
-  --warn-soft: #fdf0d8;
-  --block: #b42318;
-  --block-soft: #fde4e1;
+  --brand-soft: #e3f1ea;
+  --accent: #f2a93b;      /* marigold: the record action */
+  --accent-text: #17201c;
+  --accent-soft: #fff1d6;
+  --good: #14594a;
+  --good-soft: #e3f1ea;
+  --warn: #8a5300;
+  --warn-soft: #fff1d6;
+  --block: #b0341f;
+  --block-soft: #fde7e2;
   --info: #2457a6;
   --info-soft: #e1ebfb;
   --focus: #2457a6;
 
-  --radius: 14px;
-  --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(29, 36, 32, 0.06), 0 4px 16px rgba(29, 36, 32, 0.06);
+  --radius-lg: 22px;
+  --radius: 18px;
+  --radius-sm: 14px;
+  --shadow: 0 1px 2px rgba(14, 59, 50, 0.05), 0 6px 20px rgba(14, 59, 50, 0.07);
+  --shadow-lift: 0 12px 32px rgba(14, 59, 50, 0.16);
   --gutter: 16px;
   --maxw: 560px;          /* teacher screens are phone-first */
   --maxw-wide: 1040px;    /* admin + stats */
@@ -34,16 +43,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121614;
-    --surface: #1b211e;
-    --surface-2: #232a26;
-    --border: #333c37;
+    --bg: #0f1412;
+    --surface: #18201d;
+    --surface-2: #212a26;
+    --border: #2e3833;
+    --border-strong: #3b4741;
     --text: #e9ede9;
     --text-2: #a4aea8;
-    --brand: #4fb39c;
+    --ink: #0b2a24;
+    --ink-text: #ffffff;
+    --ink-muted: #a9cbbf;
+    --brand: #5cc4a8;
     --brand-ink: #0b1a16;
-    --brand-soft: #1d3a33;
-    --accent: #f0b65a;
+    --brand-soft: #1b3a32;
+    --accent: #f2b34f;
+    --accent-text: #17201c;
     --accent-soft: #3a2f1b;
     --good: #5cc98a;
     --good-soft: #1b3326;
@@ -55,6 +69,7 @@
     --info-soft: #1d2a40;
     --focus: #8fb4f0;
     --shadow: none;
+    --shadow-lift: 0 12px 32px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -90,14 +105,18 @@ textarea {
 h1,
 h2,
 h3 {
-  line-height: 1.25;
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
   margin: 0 0 8px;
 }
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 800;
 }
 h2 {
   font-size: 1.2rem;
+  font-weight: 700;
 }
 h3 {
   font-size: 1.05rem;
@@ -133,8 +152,8 @@ p {
 }
 .input {
   min-height: var(--tap);
-  padding: 10px 12px;
-  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
   width: 100%;

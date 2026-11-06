@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { Flag, RecordStatus, Severity } from "../api/types";
 import "./ui.css";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "accent" | "secondary" | "ghost" | "danger";
 
 export function Button({
   variant = "primary",

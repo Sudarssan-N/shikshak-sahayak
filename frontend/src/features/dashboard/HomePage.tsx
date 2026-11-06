@@ -37,10 +37,22 @@ export default function HomePage() {
 
   return (
     <div className="db-page">
-      <header className="db-greet">
-        <p className="muted">{greeting(now.getHours())},</p>
+      <header className="db-hero">
+        <div className="db-hero-top">
+          <span className="db-hero-brand">
+            <span className="db-hero-mark" aria-hidden>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+              </svg>
+            </span>
+            Shikshak Sahayak
+          </span>
+          <span className="db-hero-date">{now.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+        </div>
+        <p className="db-hero-hello">{greeting(now.getHours())},</p>
         <h1>{teacher.name}</h1>
-        <p className="muted">{teacher.school.name}</p>
+        <p className="db-hero-school">{teacher.school.name}</p>
       </header>
 
       {teacher.records_confirmed === 0 ? <PracticeNudge /> : null}
@@ -63,7 +75,10 @@ export default function HomePage() {
           {data && missingYesterday.length > 0 ? <BackfillNudge date={yesterday} classes={missingYesterday} /> : null}
 
           <section className="db-section" aria-labelledby="db-check-h">
-            <h2 id="db-check-h">Needs your check</h2>
+            <div className="db-section-head">
+              <h2 id="db-check-h">Needs your check</h2>
+              {pending.length ? <span className="db-count num">{pending.length}</span> : null}
+            </div>
             {pending.length ? (
               <ul className="db-list">
                 {pending.map((r) => (

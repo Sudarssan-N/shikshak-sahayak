@@ -3,51 +3,78 @@ import type { ClassSection, DailyRecord } from "../../api/types";
 import { StatusBadge, classLabel, formatDate } from "../../components/ui";
 import type { MonthStats } from "./recordUtils";
 
-/** Per-class status for today, with a big Record button when anything is missing. */
+/** Per-class status for today as tiles, with a big Record button when anything is missing. */
 export function TodayPanel({ classes, records }: { classes: ClassSection[]; records: DailyRecord[] }) {
   const byClass = new Map(records.map((r) => [r.class_id, r]));
-  const missing = classes.filter((c) => !byClass.has(c.id)).length;
+  const missingClasses = classes.filter((c) => !byClass.has(c.id));
+  const recorded = classes.length - missingClasses.length;
+  const cta =
+    missingClasses.length === 1 ? `Record ${classLabel(missingClasses[0].grade, missingClasses[0].section)} now` : "Record today’s note";
   return (
-    <section className="card db-today" aria-labelledby="db-today-h">
-      <h2 id="db-today-h">Today</h2>
+    <section className="db-today" aria-labelledby="db-today-h">
+      <div className="db-section-head">
+        <h2 id="db-today-h">Today</h2>
+        {classes.length ? (
+          <span className="db-today-count num">
+            {recorded} of {classes.length} recorded
+          </span>
+        ) : null}
+      </div>
       {classes.length === 0 ? (
         <p className="muted">No classes yet. Ask your pilot lead to add your class list.</p>
       ) : (
-        <ul className="db-list" style={{ gap: 0 }}>
+        <ul className="db-tiles-today">
           {classes.map((c) => {
             const r = byClass.get(c.id);
+            const label = classLabel(c.grade, c.section);
+            if (!r) {
+              return (
+                <li key={c.id} className="db-ct db-ct-missing">
+                  <span className="db-ct-name">{label}</span>
+                  <span className="db-ct-big">—</span>
+                  <span className="db-ct-sub">not recorded yet</span>
+                </li>
+              );
+            }
+            const done = r.status === "confirmed";
             return (
-              <li key={c.id} className="db-today-row">
-                <span>
-                  <strong>{classLabel(c.grade, c.section)}</strong>
-                  <span className="muted num"> · {c.enrolled} enrolled</span>
-                </span>
-                {!r ? (
-                  <span className="muted">Not recorded yet</span>
-                ) : r.status === "confirmed" ? (
-                  <Link to={`/records/${r.id}`} className="db-today-done num">
-                    ✓ {r.present ?? "?"}/{r.enrolled ?? c.enrolled}
-                  </Link>
-                ) : (
-                  <Link to={`/records/${r.id}`} aria-label={`${classLabel(c.grade, c.section)}: open record`}>
-                    <StatusBadge status={r.status} />
-                  </Link>
-                )}
+              <li key={c.id}>
+                <Link to={`/records/${r.id}`} className={`db-ct ${done ? "db-ct-done" : "db-ct-check"}`}>
+                  <span className="db-ct-name">
+                    {done ? <CheckMark /> : null}
+                    {label}
+                  </span>
+                  <span className="db-ct-big num">
+                    {r.present ?? "?"}
+                    <small>/{r.enrolled ?? c.enrolled}</small>
+                  </span>
+                  <span className="db-ct-sub">{done ? `present · ${r.meals_served ?? "?"} meals` : <StatusBadge status={r.status} />}</span>
+                </Link>
               </li>
             );
           })}
         </ul>
       )}
-      {missing > 0 || classes.length === 0 ? (
-        <Link to="/record" className="btn btn-primary btn-block db-cta">
-          <span aria-hidden>●</span> Record today’s note
+      {missingClasses.length > 0 || classes.length === 0 ? (
+        <Link to="/record" className="btn btn-accent btn-block db-cta">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+          </svg>
+          {cta}
         </Link>
       ) : (
-        <p className="muted" style={{ margin: 0 }}>
-          All classes recorded for today. Well done.
-        </p>
+        <p className="db-alldone">All classes recorded for today. Well done.</p>
       )}
     </section>
+  );
+}
+
+function CheckMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
   );
 }
 

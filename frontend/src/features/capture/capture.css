@@ -45,13 +45,12 @@
   cursor: pointer;
 }
 .cap-chip[aria-pressed="true"] {
-  background: var(--brand-soft);
-  border-color: var(--brand);
-  color: var(--brand);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-text);
 }
 .cap-callout {
   background: var(--accent-soft);
-  border-left: 4px solid var(--accent);
   padding: 12px 14px;
   border-radius: var(--radius-sm);
 }
@@ -85,7 +84,8 @@ h1[tabindex="-1"]:focus-visible {
 }
 .cap-brand strong {
   display: block;
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
 }
 .cap-brand-sub {
   display: block;
@@ -98,14 +98,14 @@ h1[tabindex="-1"]:focus-visible {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: var(--brand);
-  color: var(--brand-ink);
+  background: var(--accent);
+  color: var(--accent-text);
 }
 .cap-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 22px 20px;
   box-shadow: var(--shadow);
 }
 .cap-phone {
@@ -117,7 +117,7 @@ h1[tabindex="-1"]:focus-visible {
   place-items: center;
   padding: 0 12px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-right: 0;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   font-weight: 600;
@@ -155,20 +155,27 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .cap-school {
-  padding: 16px 18px;
-  background: var(--brand-soft);
+  padding: 18px 20px;
+  background: var(--ink);
+  color: var(--ink-text);
   border-color: transparent;
   box-shadow: none;
 }
+.cap-school .muted {
+  color: var(--ink-muted);
+}
 .cap-eyebrow {
   margin: 0;
-  font-size: 0.9rem;
-  color: var(--brand);
-  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-weight: 700;
 }
 .cap-school-name {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
   margin: 2px 0 8px;
 }
 .cap-class-list {
@@ -183,7 +190,8 @@ h1[tabindex="-1"]:focus-visible {
   display: flex;
   flex-direction: column;
   padding: 6px 12px;
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink-text);
   border-radius: var(--radius-sm);
   font-weight: 600;
   line-height: 1.3;
@@ -220,7 +228,6 @@ h1[tabindex="-1"]:focus-visible {
 .cap-example {
   margin: 0;
   padding: 14px 16px;
-  border-left: 4px solid var(--accent);
   background: var(--accent-soft);
   border-radius: var(--radius-sm);
   font-size: 1.1rem;
@@ -259,16 +266,27 @@ h1[tabindex="-1"]:focus-visible {
   gap: 16px;
 }
 .rec-hint {
-  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.rec-hint-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--warn);
 }
 .rec-hint p {
   margin: 0;
 }
 .rec-example {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  font-weight: 500;
   line-height: 1.6;
 }
 .rec-textarea {
@@ -286,10 +304,11 @@ h1[tabindex="-1"]:focus-visible {
   align-items: center;
   gap: 6px;
   min-height: var(--tap);
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 0;
   background: var(--surface);
+  box-shadow: var(--shadow);
   cursor: pointer;
 }
 .rec-caret {
@@ -305,9 +324,8 @@ h1[tabindex="-1"]:focus-visible {
   flex-direction: column;
   gap: 12px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lift);
 }
 .rec-date-panel p {
   margin: 0;
@@ -319,23 +337,25 @@ h1[tabindex="-1"]:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-bottom: 8px;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 0 8px;
 }
 .rec-big {
   position: relative;
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 136px;
-  height: 136px;
+  width: 140px;
+  height: 140px;
+  margin: 40px 0 12px;
   border-radius: 50%;
-  border: 6px solid var(--brand-soft);
-  background: var(--brand);
-  color: var(--brand-ink);
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-text);
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: 0 0 0 22px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 0 0 42px color-mix(in srgb, var(--accent) 14%, transparent), 0 16px 34px rgba(184, 110, 0, 0.35);
   transition: transform 0.08s ease;
 }
 .rec-big:active {
@@ -345,9 +365,15 @@ h1[tabindex="-1"]:focus-visible {
   opacity: 0.7;
 }
 .rec-big-label {
-  margin: 4px 0 0;
-  font-size: 1.15rem;
-  font-weight: 700;
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.rec-big-sub {
+  margin: -8px 0 0;
+  font-size: 0.88rem;
+  color: var(--text-2);
 }
 
 /* live recording */
@@ -358,7 +384,22 @@ h1[tabindex="-1"]:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  padding: 28px 20px;
   text-align: center;
+  background: var(--ink);
+  color: var(--ink-text);
+  border-radius: var(--radius-lg);
+}
+.rec-live .muted {
+  color: var(--ink-muted);
+}
+.rec-live .btn-secondary {
+  color: var(--ink-text);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.rec-live .btn-primary {
+  background: #fff;
+  color: #17201c;
 }
 .rec-live p {
   margin: 0;
@@ -381,21 +422,22 @@ h1[tabindex="-1"]:focus-visible {
 }
 .rec-meter-pulse {
   inset: 26px;
-  background: var(--block-soft);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
   transform: scale(calc(1 + var(--level) * 0.55));
   transition: transform 0.06s linear;
 }
 /* countdown ring: fills as the 90 s budget is used */
 .rec-meter-ring {
   inset: 14px;
-  background: conic-gradient(var(--block) calc(var(--p) * 360deg), transparent 0);
+  background: conic-gradient(var(--accent) calc(var(--p) * 360deg), rgba(255, 255, 255, 0.12) 0);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
 }
-.rec-big-stop {
-  background: var(--block);
-  color: var(--surface);
-  border-color: var(--surface);
+.rec-big.rec-big-stop {
+  margin: 0;
+  background: #fff;
+  color: var(--block);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
 }
 .rec-stop-square {
   width: 40px;
@@ -404,8 +446,10 @@ h1[tabindex="-1"]:focus-visible {
   background: currentColor;
 }
 .rec-timer {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -418,12 +462,16 @@ h1[tabindex="-1"]:focus-visible {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--block);
+  background: #ff7a62;
   animation: rec-blink 1s ease-in-out infinite;
 }
 .rec-near-end {
-  color: var(--block);
+  color: var(--accent);
   font-weight: 700;
+}
+.rec-live-compact {
+  padding: 18px 14px;
+  border-radius: var(--radius);
 }
 .rec-live-compact .rec-meter {
   width: 132px;
@@ -467,7 +515,7 @@ h1[tabindex="-1"]:focus-visible {
   width: 8px;
   height: 100%;
   border-radius: 4px;
-  background: var(--brand);
+  background: var(--accent);
   animation: rec-wave 1s ease-in-out infinite;
   transform-origin: center;
 }
@@ -530,23 +578,19 @@ h1[tabindex="-1"]:focus-visible {
 /* ---------- confirmation card ---------- */
 .cc {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-top-width: 5px;
-  border-radius: var(--radius);
-  padding: 16px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 18px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.cc-good {
-  border-top-color: var(--good);
-}
 .cc-warn {
-  border-top-color: var(--warn);
+  border-color: var(--accent-soft);
 }
 .cc-block {
-  border-top-color: var(--block);
+  border-color: var(--block-soft);
 }
 .cc-head {
   display: flex;
@@ -555,7 +599,8 @@ h1[tabindex="-1"]:focus-visible {
   gap: 8px;
 }
 .cc-head h2 {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
+  font-weight: 800;
   margin: 0;
 }
 .cc-head p {
@@ -567,6 +612,9 @@ h1[tabindex="-1"]:focus-visible {
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   margin: 0;
+  padding: 8px;
+  background: var(--ink);
+  border-radius: var(--radius);
 }
 .cc-num {
   display: flex;
@@ -575,52 +623,50 @@ h1[tabindex="-1"]:focus-visible {
   align-items: center;
   text-align: center;
   padding: 10px 4px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  border-radius: 12px;
+  background: transparent;
   border: 2px solid transparent;
+  color: var(--ink-text);
   min-width: 0;
 }
 .cc-num dd {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.1;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .cc-num dt {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--ink-muted);
   line-height: 1.2;
 }
 .cc-num-sub {
   display: block;
-  font-size: 0.7rem;
+  font-family: var(--font);
+  font-size: 0.68rem;
   font-weight: 400;
-  color: var(--text-2);
-}
-.cc-num-quiet {
-  background: transparent;
-  border: 2px dashed var(--border);
+  color: inherit;
+  opacity: 0.8;
 }
 .cc-num-quiet dd {
-  color: var(--text-2);
+  color: var(--ink-muted);
 }
 .cc-num-warn {
-  background: var(--warn-soft);
-  border-color: var(--warn);
-}
-.cc-num-warn dd {
-  color: var(--warn);
+  background: var(--accent);
+  color: var(--accent-text);
 }
 .cc-num-block {
-  background: var(--block-soft);
-  border-color: var(--block);
+  background: #ff8a7a;
+  color: #2a0d08;
 }
-.cc-num-block dd {
-  color: var(--block);
+.cc-num-warn dt,
+.cc-num-block dt {
+  color: inherit;
 }
 
 .cc-section {
@@ -647,7 +693,6 @@ h1[tabindex="-1"]:focus-visible {
   padding: 6px 12px;
   border-radius: 999px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
   font-weight: 600;
 }
 .cc-chip .muted {
@@ -695,6 +740,7 @@ h1[tabindex="-1"]:focus-visible {
 .cc-confirm {
   min-height: 56px;
   font-size: 1.1rem;
+  border-radius: var(--radius);
 }
 .btn.cc-confirm-anyway {
   min-height: 56px;
@@ -729,8 +775,7 @@ h1[tabindex="-1"]:focus-visible {
 .cc-saved {
   flex-direction: row;
   align-items: center;
-  border-top-width: 1px;
-  border-color: var(--good);
+  border-color: transparent;
   background: var(--good-soft);
   box-shadow: none;
 }
@@ -756,8 +801,8 @@ h1[tabindex="-1"]:focus-visible {
 .nq {
   margin: 0;
   padding: 14px;
-  border: 2px solid var(--block);
-  border-radius: var(--radius-sm);
+  border: 0;
+  border-radius: var(--radius);
   background: var(--block-soft);
   display: flex;
   flex-direction: column;
@@ -799,7 +844,7 @@ h1[tabindex="-1"]:focus-visible {
   min-height: 52px;
   padding: 8px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 2px solid transparent;
   background: var(--surface);
   text-align: left;
   cursor: pointer;
@@ -890,15 +935,18 @@ h1[tabindex="-1"]:focus-visible {
 .rec-done-badge {
   display: grid;
   place-items: center;
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
+  margin-top: 8px;
   border-radius: 50%;
-  background: var(--good);
-  color: var(--surface);
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 0 0 12px var(--accent-soft);
   animation: rec-pop 0.4s ease-out;
 }
 .rec-done h1 {
-  margin: 0;
+  margin: 8px 0 0;
+  font-size: 2rem;
 }
 .rec-done-list {
   list-style: none;
@@ -910,10 +958,10 @@ h1[tabindex="-1"]:focus-visible {
 }
 .rec-rate {
   width: 100%;
-  padding: 18px 14px;
+  padding: 18px 16px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 .rec-rate h2 {
   margin-bottom: 2px;
@@ -927,17 +975,18 @@ h1[tabindex="-1"]:focus-visible {
 .rec-rate-chip {
   min-height: 56px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 2px solid transparent;
   background: var(--surface-2);
-  font-size: 1.2rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
   cursor: pointer;
 }
 .rec-rate-chip:hover,
 .rec-rate-chip:active {
-  background: var(--brand-soft);
-  border-color: var(--brand);
-  color: var(--brand);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--warn);
 }
 .rec-thanks {
   margin: 12px 0 0;

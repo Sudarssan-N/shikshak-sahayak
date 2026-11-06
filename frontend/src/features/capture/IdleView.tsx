@@ -33,7 +33,7 @@ export function IdleView({ teacher, recordDate, onDateChange, onRecord, onSendTe
       <DateChooser value={recordDate} onChange={onDateChange} />
 
       <div className="rec-hint">
-        <p className="muted cap-small">Say it like this:</p>
+        <span className="rec-hint-label">Say it like this</span>
         <p className="rec-example" lang={LANG_TAG[teacher.language]}>
           “{exampleNote(teacher.language, grade)}”
         </p>
@@ -51,6 +51,7 @@ export function IdleView({ teacher, recordDate, onDateChange, onRecord, onSendTe
             <MicIcon size={56} />
           </button>
           <p className="rec-big-label">{starting ? "Starting microphone…" : "Tap to speak"}</p>
+          <p className="rec-big-sub">Up to 90 seconds · speak in your own language</p>
           <button type="button" className="cap-linkbtn" onClick={() => setTyping(true)}>
             Type instead
           </button>

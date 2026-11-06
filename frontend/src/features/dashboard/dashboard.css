@@ -8,11 +8,95 @@
 .db-section > h2 {
   margin-bottom: 10px;
 }
-.db-greet h1 {
-  font-size: 1.6rem;
+
+/* hero band */
+.db-hero {
+  position: relative;
+  overflow: hidden;
+  margin: -16px calc(-1 * var(--gutter)) 0;
+  padding: 24px calc(var(--gutter) + 4px) 76px;
+  background: var(--ink);
+  color: var(--ink-text);
+  border-radius: 0 0 28px 28px;
 }
-.db-greet p {
+.db-hero::after {
+  content: "";
+  position: absolute;
+  right: -70px;
+  top: -70px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.03), 0 0 0 60px rgba(255, 255, 255, 0.025);
+  pointer-events: none;
+}
+.db-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  position: relative;
+  z-index: 1;
+}
+.db-hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.db-hero-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.db-hero-date {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.db-hero p {
   margin: 0;
+  color: var(--ink-muted);
+  position: relative;
+}
+.db-hero h1 {
+  margin: 2px 0 4px;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  position: relative;
+}
+.db-hero-school {
+  font-size: 0.9rem;
+}
+.db-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.db-section-head h2 {
+  margin: 0;
+}
+.db-count {
+  align-self: center;
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--block);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 /* lists */
@@ -27,12 +111,13 @@
 .db-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 64px;
+  gap: 12px;
+  min-height: 68px;
   padding: 12px 14px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   color: var(--text);
   text-decoration: none;
 }
@@ -47,7 +132,34 @@
   gap: 2px;
 }
 .db-row-title {
-  font-weight: 600;
+  font-weight: 700;
+}
+.db-row-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.db-row-icon-done {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.db-row-icon-block {
+  background: var(--block-soft);
+  color: var(--block);
+}
+.db-row-icon-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.db-row-icon-draft {
+  background: var(--surface-2);
+  color: var(--text-2);
 }
 .db-row-meta {
   display: flex;
@@ -64,37 +176,95 @@
   font-weight: 600;
 }
 .db-chev {
+  flex: none;
   color: var(--text-2);
-  font-size: 1.4rem;
-  line-height: 1;
 }
 
-/* today panel */
+/* today panel: floats over the hero */
 .db-today {
+  position: relative;
+  margin-top: -76px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
+  padding: 18px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
 }
-.db-today-row {
+.db-today .db-section-head {
+  margin-bottom: 0;
+}
+.db-tiles-today {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.db-ct {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: var(--tap);
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-.db-today-row:last-child {
-  border-bottom: 0;
-}
-.db-today-done {
-  color: var(--good);
-  font-weight: 600;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
   text-decoration: none;
 }
+.db-ct-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.db-ct-big {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.db-ct-big small {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.db-ct-sub {
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+.db-ct-done {
+  background: var(--good-soft);
+}
+.db-ct-done .db-ct-name {
+  color: var(--good);
+}
+.db-ct-check {
+  background: var(--surface-2);
+}
+.db-ct-missing {
+  background: var(--accent-soft);
+  border: 2px dashed var(--accent);
+  padding: 10px;
+}
+.db-ct-missing .db-ct-name,
+.db-ct-missing .db-ct-big,
+.db-ct-missing .db-ct-sub {
+  color: var(--warn);
+}
 .db-cta {
-  font-size: 1.1rem;
-  min-height: 56px;
+  font-size: 1.05rem;
+  min-height: 54px;
+}
+.db-alldone {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--good-soft);
+  color: var(--good);
+  font-weight: 700;
 }
 
 /* nudges */
@@ -105,7 +275,7 @@
   padding: 14px 16px;
   border-radius: var(--radius);
   background: var(--accent-soft);
-  border: 1px solid var(--accent);
+  border: 0;
 }
 .db-nudge-info {
   background: var(--info-soft);
@@ -126,11 +296,14 @@
   margin: 0;
 }
 .db-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 2px;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 10px 8px;
-  text-align: center;
+  padding: 12px;
+  box-shadow: var(--shadow);
 }
 .db-stat dt {
   font-size: 0.78rem;
@@ -138,8 +311,10 @@
 }
 .db-stat dd {
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -162,9 +337,9 @@
   cursor: pointer;
 }
 .db-chip[aria-pressed="true"] {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--brand-ink);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-text);
 }
 .db-group > h2 {
   font-size: 0.95rem;
@@ -336,4 +511,9 @@
 }
 .db-danger h2 {
   color: var(--block);
+}
+.db-today-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-2);
 }
