@@ -68,6 +68,7 @@ async def extract(transcript: str, today: date, default_date: date | None,
                 rec = _unmask(rec, mapping)
                 for c in rec.classes:
                     c.enrolled = None  # enrolled always comes from the roster
+                    c.lessons = [ls for ls in c.lessons if ls.lesson_ref or ls.subject]  # drop empty stubs
                     c.record_date = c.record_date or rec.record_date or default_date or today
                 return rec, llm.label()
     rec = parser.parse(transcript, today, default_date)

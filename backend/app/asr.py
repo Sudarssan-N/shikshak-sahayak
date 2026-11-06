@@ -40,6 +40,8 @@ async def transcribe(audio: bytes, mime: str, language: str) -> Transcript:
         raise ASRError("The recording was empty. Please hold the button and speak again.")
     mime = (mime or "audio/webm").split(";")[0].strip()
     data = {"model": config.SARVAM_STT_MODEL, "language_code": LANG.get(language, "unknown")}
+    if config.SARVAM_STT_MODEL.startswith("saaras"):
+        data["mode"] = "transcribe"
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             r = await client.post("https://api.sarvam.ai/speech-to-text",

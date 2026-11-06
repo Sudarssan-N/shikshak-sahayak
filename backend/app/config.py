@@ -24,10 +24,10 @@ TIMEZONE = _env("TIMEZONE", "Asia/Kolkata")
 
 # Speech: Sarvam Saaras/Saarika. Without a key, audio notes fail politely and text input still works.
 SARVAM_API_KEY = _env("SARVAM_API_KEY")
-SARVAM_STT_MODEL = _env("SARVAM_STT_MODEL", "saarika:v2.5")
+SARVAM_STT_MODEL = _env("SARVAM_STT_MODEL", "saaras:v4")
 # Extraction LLM: "sarvam" (OpenAI-compatible chat), or "none" to use only the deterministic parser.
 LLM_PROVIDER = _env("LLM_PROVIDER", "sarvam" if SARVAM_API_KEY else "none")
-SARVAM_CHAT_MODEL = _env("SARVAM_CHAT_MODEL", "sarvam-m")
+SARVAM_CHAT_MODEL = _env("SARVAM_CHAT_MODEL", "sarvam-105b-conversations")
 
 FRONTEND_DIST = Path(_env("FRONTEND_DIST", str(ROOT.parent / "frontend" / "dist")))
 REPORTS_DIR = DATA_DIR / "reports"
