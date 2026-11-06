@@ -1,0 +1,151 @@
+/* Design tokens. Every feature uses these variables; never hard-code colours. */
+:root {
+  --font: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
+
+  --bg: #f6f4ee;          /* warm paper */
+  --surface: #ffffff;
+  --surface-2: #efece3;
+  --border: #ddd8cb;
+  --text: #1d2420;
+  --text-2: #5b645e;
+  --brand: #0f5c4d;       /* deep teal-green, chalkboard */
+  --brand-ink: #ffffff;
+  --brand-soft: #dcefe9;
+  --accent: #e8a33d;      /* marigold */
+  --accent-soft: #fbedd5;
+  --good: #1f7a46;
+  --good-soft: #def2e5;
+  --warn: #9a5b00;
+  --warn-soft: #fdf0d8;
+  --block: #b42318;
+  --block-soft: #fde4e1;
+  --info: #2457a6;
+  --info-soft: #e1ebfb;
+  --focus: #2457a6;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(29, 36, 32, 0.06), 0 4px 16px rgba(29, 36, 32, 0.06);
+  --gutter: 16px;
+  --maxw: 560px;          /* teacher screens are phone-first */
+  --maxw-wide: 1040px;    /* admin + stats */
+  --tap: 48px;            /* minimum touch target */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614;
+    --surface: #1b211e;
+    --surface-2: #232a26;
+    --border: #333c37;
+    --text: #e9ede9;
+    --text-2: #a4aea8;
+    --brand: #4fb39c;
+    --brand-ink: #0b1a16;
+    --brand-soft: #1d3a33;
+    --accent: #f0b65a;
+    --accent-soft: #3a2f1b;
+    --good: #5cc98a;
+    --good-soft: #1b3326;
+    --warn: #f0b65a;
+    --warn-soft: #3a2f1b;
+    --block: #ff8a7a;
+    --block-soft: #3d1f1b;
+    --info: #8fb4f0;
+    --info-soft: #1d2a40;
+    --focus: #8fb4f0;
+    --shadow: none;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+a {
+  color: var(--brand);
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  margin: 0 0 8px;
+}
+h1 {
+  font-size: 1.5rem;
+}
+h2 {
+  font-size: 1.2rem;
+}
+h3 {
+  font-size: 1.05rem;
+}
+p {
+  margin: 0 0 8px;
+}
+.muted {
+  color: var(--text-2);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.input {
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  width: 100%;
+}
+.input:focus {
+  border-color: var(--brand);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
