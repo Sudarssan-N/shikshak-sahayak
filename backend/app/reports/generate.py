@@ -17,7 +17,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import config
+from .. import config, followup
 from ..db import DailyRecord, Report, Teacher, ValidationFlag, uid
 from ..service import class_label, roster
 
@@ -171,7 +171,24 @@ def summary_pdf(db: Session, t: Teacher, month: str, tpl: dict) -> bytes:
                                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bbbbbb")),
                                ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     working = sum(1 for d in range(1, end.day + 1) if date(start.year, start.month, d).weekday() != 6)
-    story += [table, Spacer(1, 12),
+    story += [table, Spacer(1, 12)]
+    # Dropout early-warning for the month, from confirmed records only.
+    concerns = followup.teacher_concerns(db, t, end, window_days=(end - start).days)
+    story.append(Paragraph("Children to follow up", styles["Heading2"]))
+    if concerns:
+        frows = [["Class", "Roll", "Name", "Days absent", "Attendance", "Why"]]
+        frows += [[f"Class {c.grade}{'-' + c.section if c.section else ''}", c.roll_no, c.name,
+                   f"{c.days_absent}/{c.days_recorded}", f"{c.attendance_pct}%", "; ".join(c.reasons)]
+                  for c in concerns]
+        ft = Table(frows, repeatRows=1)
+        ft.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fff1d6")),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bbbbbb"))]))
+        story.append(ft)
+    else:
+        story.append(Paragraph("No child was absent 3 school days in a row or below 75% attendance.",
+                               styles["Normal"]))
+    story += [Spacer(1, 12),
               Paragraph(f"Working days in month (Mon–Sat): {working}. Days with no confirmed record are left "
                         f"blank in the registers.", styles["Normal"]),
               Spacer(1, 18), Paragraph(_footer(tpl), styles["Italic"])]
@@ -183,9 +200,12 @@ BUILDERS = {"attendance": attendance_xlsx, "mdm": mdm_xlsx, "summary": summary_p
 NAMES = {"attendance": "attendance-register", "mdm": "mdm-register", "summary": "monthly-summary", "csv": "upload"}
 
 
+def build_bytes(db: Session, t: Teacher, kind: str, month: str) -> bytes:
+    return BUILDERS[kind](db, t, month, _template(t.school.state))
+
+
 def generate(db: Session, t: Teacher, kind: str, month: str) -> Report:
-    tpl = _template(t.school.state)
-    data = BUILDERS[kind](db, t, month, tpl)
+    data = build_bytes(db, t, kind, month)
     rid = uid()
     filename = f"{NAMES[kind]}-{month}.{EXT[kind]}"
     path = config.REPORTS_DIR / f"{rid}.{EXT[kind]}"

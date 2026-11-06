@@ -2,6 +2,7 @@ import { api } from "../../api/client";
 import { useAuth } from "../../auth";
 import { EmptyState, ErrorNote, Spinner } from "../../components/ui";
 import { addDays, isWorkingDay, monthKey, monthLabel, ymd } from "./dates";
+import { FollowUpPanel } from "./FollowUpPanel";
 import { BackfillNudge, MonthStrip, PracticeNudge, TodayPanel } from "./HomeParts";
 import { RecordRow } from "./RecordRow";
 import { monthStats, needsCheck } from "./recordUtils";
@@ -91,6 +92,8 @@ export default function HomePage() {
               </EmptyState>
             )}
           </section>
+
+          <FollowUpPanel />
 
           <MonthStrip stats={monthStats(records, month)} label={`This month · ${monthLabel(month)}`} />
         </>

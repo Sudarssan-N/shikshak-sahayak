@@ -4,11 +4,11 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .. import config, service
+from .. import config, followup, service, speech
 from ..db import (Correction, DailyRecord, LoginCode, Report, Student, Teacher, UsageEvent, ValidationFlag,
                   VoiceNote, get_db, now)
 from ..reports import generate as reports
@@ -39,7 +39,8 @@ def request_code(body: PhoneIn, db: Session = Depends(get_db)):
     db.commit()
     # Delivery channel (SMS / WhatsApp template) is an open decision; in dev the code is returned directly.
     log.info("login code issued phone_hash=%s…", ph[:8])
-    return {"sent": True, **({"dev_code": code} if config.DEV_MODE else {})}
+    show = config.DEV_MODE or body.phone.strip()[-10:] in config.DEMO_PHONES
+    return {"sent": True, **({"dev_code": code} if show else {})}
 
 
 @router.post("/auth/verify")
@@ -151,6 +152,31 @@ def get_record(record_id: str, t: Teacher = Depends(current_teacher), db: Sessio
     return service.ser_record(own_record(record_id, t, db))
 
 
+@router.get("/records/{record_id}/speech")
+async def record_speech(record_id: str, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    """The card read aloud in the teacher's language (mp3), so they can confirm by ear."""
+    r = own_record(record_id, t, db)
+    ser = service.ser_record(r)
+    names = [a["name"] for a in ser["absent"]]
+    flags = [f["message"] for f in ser["flags"] if f["resolution"] == "open" and f["severity"] != "info"]
+    text = speech.summary_text(r, names, flags, t.language)
+    try:
+        audio = await speech.synthesize(text, t.language)
+    except speech.SpeechError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    service.track(db, t, "readback", language=t.language)
+    db.commit()
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=600"})
+
+
+@router.get("/followup")
+def follow_up(t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    """Dropout early-warning: children with a run of absences or low attendance in the last 30 days."""
+    items = followup.teacher_concerns(db, t, service.today())
+    return {"window_days": followup.WINDOW_DAYS, "streak_min": followup.STREAK_MIN, "pct_min": followup.PCT_MIN,
+            "children": [c.as_dict() for c in items]}
+
+
 @router.post("/records/{record_id}/corrections")
 async def correct(record_id: str, request: Request, t: Teacher = Depends(current_teacher),
                   db: Session = Depends(get_db)):
@@ -231,8 +257,11 @@ def create_report(body: ReportIn, t: Teacher = Depends(current_teacher), db: Ses
 @router.get("/reports/{report_id}/download")
 def download(report_id: str, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
     rep = db.get(Report, report_id)
-    if rep is None or rep.teacher_id != t.id or not Path(rep.file_uri).exists():
+    if rep is None or rep.teacher_id != t.id:
         raise HTTPException(404, "Report not found.")
+    if not Path(rep.file_uri).exists():
+        # Cloud Run's disk is wiped on restart: rebuild the file from the confirmed records instead of failing.
+        Path(rep.file_uri).write_bytes(reports.build_bytes(db, t, rep.kind, rep.period))
     return FileResponse(rep.file_uri, filename=rep.filename)
 
 

@@ -45,8 +45,16 @@ def main():
     lesson3, lesson5 = 3, 5
     while day < service.today():
         if day.weekday() != 6:
-            a3 = rnd.sample(names3, rnd.randint(1, 4))
-            a5 = rnd.sample(names5, rnd.randint(0, 3))
+            a3 = rnd.sample(names3, rnd.choice([0, 1, 1, 2]))
+            a5 = rnd.sample(names5, rnd.choice([0, 0, 1, 1, 2]))
+            # Two realistic early-warning cases for the follow-up list: Kunal stops coming for the last 4 school
+            # days, and Kavita misses about half the days.
+            if (service.today() - day).days <= 5 and "Kunal" not in a5:
+                a5.append("Kunal")
+            elif (service.today() - day).days > 5 and "Kunal" in a5:
+                a5.remove("Kunal")
+            if rnd.random() < 0.45 and "Kavita" not in a3:
+                a3.append("Kavita")
             p3, p5 = 28 - len(a3), 24 - len(a5)
             lesson3 += rnd.random() < 0.4
             lesson5 += rnd.random() < 0.4

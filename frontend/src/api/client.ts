@@ -1,4 +1,5 @@
 import type {
+  FollowUp,
   AdminTeacher,
   ClassRoster,
   DailyRecord,
@@ -130,6 +131,10 @@ export const api = {
       method: "POST",
       body: json({ acknowledge_warnings: acknowledgeWarnings }),
     }),
+  /** The card read aloud (mp3). Same query-token auth as report downloads, so an <audio> element can play it. */
+  speechUrl: (id: string, version: number) =>
+    `/api/records/${id}/speech?v=${version}&token=${encodeURIComponent(session.token ?? "")}`,
+  followUp: () => request<FollowUp>("/api/followup"),
   timeSaved: (id: string, minutes: number) =>
     request<{ ok: boolean }>(`/api/records/${id}/time-saved`, { method: "POST", body: json({ minutes }) }),
 

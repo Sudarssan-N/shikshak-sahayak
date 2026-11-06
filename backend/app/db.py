@@ -8,10 +8,15 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship,
 
 from . import config
 
-engine = create_engine(
-    config.DATABASE_URL,
-    connect_args={"check_same_thread": False} if config.DATABASE_URL.startswith("sqlite") else {},
-)
+_url = config.DATABASE_URL
+if _url.startswith("postgresql://"):
+    _url = "postgresql+psycopg://" + _url[len("postgresql://"):]  # psycopg 3 driver
+if _url.startswith("sqlite"):
+    engine = create_engine(_url, connect_args={"check_same_thread": False})
+else:
+    # Small pool behind a hosted pooler (Supabase/Cloud SQL). pre_ping survives connections dropped while the
+    # container was scaled to zero.
+    engine = create_engine(_url, pool_size=3, max_overflow=2, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 

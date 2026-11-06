@@ -166,3 +166,26 @@ export interface Stats {
   daily: { day: string; notes: number; confirmed: number }[]; // last 30 days
   updated_at: string;
 }
+
+/** Dropout early-warning: a child with a run of absences or low attendance in the last 30 days. */
+export interface FollowUpChild {
+  student_id: string;
+  name: string;
+  roll_no: number;
+  class_id: string;
+  grade: number;
+  section: string | null;
+  streak: number;
+  days_absent: number;
+  days_recorded: number;
+  attendance_pct: number;
+  last_present: string | null;
+  reasons: string[];
+}
+
+export interface FollowUp {
+  window_days: number;
+  streak_min: number;
+  pct_min: number;
+  children: FollowUpChild[];
+}

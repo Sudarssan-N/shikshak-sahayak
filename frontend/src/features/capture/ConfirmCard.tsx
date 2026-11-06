@@ -5,6 +5,7 @@ import { Button, classLabel, FlagList, formatDate, StatusBadge } from "../../com
 import { CheckIcon, MicIcon } from "./Brand";
 import { EditPanel } from "./EditPanel";
 import { FixPanel } from "./FixPanel";
+import { ListenButton } from "./ListenButton";
 import { friendlyError } from "./copy";
 import { NameQuestion } from "./NameQuestion";
 
@@ -92,7 +93,10 @@ export function ConfirmCard({ record, language, onUpdated }: Props) {
           <h2 id={headingId}>{title}</h2>
           <p className="muted cap-small">{formatDate(record.record_date)}</p>
         </div>
-        <StatusBadge status={record.status} />
+        <div className="cc-head-side">
+          <StatusBadge status={record.status} />
+          <ListenButton recordId={record.id} version={record.version} />
+        </div>
       </header>
 
       <dl className="cc-nums">

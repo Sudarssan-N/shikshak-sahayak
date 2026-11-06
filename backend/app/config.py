@@ -17,6 +17,10 @@ DATA_DIR = Path(_env("DATA_DIR", str(ROOT / "data")))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DATABASE_URL = _env("DATABASE_URL", f"sqlite:///{DATA_DIR / 'shikshak.db'}")
 
+# Phones whose login code is shown on screen even in production (the public demo account for judges).
+# Real teachers never get their code in the API response; OTP delivery for them is a separate channel.
+DEMO_PHONES = {p.strip() for p in _env("DEMO_PHONES").split(",") if p.strip()}
+
 SECRET_KEY = _env("SECRET_KEY", "dev-only-change-me")
 ADMIN_KEY = _env("ADMIN_KEY", "dev-admin-key" if DEV_MODE else "")
 TOKEN_MAX_AGE_S = 30 * 24 * 3600

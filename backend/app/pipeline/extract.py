@@ -24,6 +24,8 @@ Rules:
 - Do not compute present from enrolled or absent; only copy numbers that were spoken.
 - One entry in classes per class AND per date mentioned (backfill notes can name several days).
 - Resolve "today"/"aaj" to TODAY, "yesterday"/"kal" to the day before, weekday names to the most recent such day.
+- If the teacher does not say a day, every record_date is null (the app then uses DEFAULT_DATE, the day the
+  teacher picked on screen). Never fill in TODAY for a day that was not spoken.
 - Tokens like [S1] are student names that were masked; copy them exactly into absent_names.
 - absent_names lists names as spoken, without titles."""
 
@@ -66,6 +68,11 @@ async def extract(transcript: str, today: date, default_date: date | None,
                 continue
             if rec.classes:
                 rec = _unmask(rec, mapping)
+                if not parser.date_markers(transcript, today):
+                    # No day was spoken: the date the teacher picked wins over anything the model filled in.
+                    rec.record_date = None
+                    for c in rec.classes:
+                        c.record_date = None
                 for c in rec.classes:
                     c.enrolled = None  # enrolled always comes from the roster
                     c.lessons = [ls for ls in c.lessons if ls.lesson_ref or ls.subject]  # drop empty stubs

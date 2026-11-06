@@ -40,7 +40,7 @@ CLASS_MARK = re.compile(
     re.I)
 
 
-def _date_markers(text: str, today: date) -> list[tuple[int, date]]:
+def date_markers(text: str, today: date) -> list[tuple[int, date]]:
     out: list[tuple[int, date]] = []
     low = text.lower()
     for m in re.finditer(r"\b(today|aaj)\b|आज", low):
@@ -144,7 +144,7 @@ def _fields(text: str) -> tuple[ClassDay, dict[str, float]]:
 
 def parse(transcript: str, today: date, default_date: date | None = None) -> ExtractedRecord:
     text = words_to_digits(transcript)
-    markers: list[tuple[int, str, object]] = [(p, "date", d) for p, d in _date_markers(text, today)]
+    markers: list[tuple[int, str, object]] = [(p, "date", d) for p, d in date_markers(text, today)]
     for m in CLASS_MARK.finditer(text):
         g = next(x for x in m.groups()[:1] + m.groups()[2:] if x)
         sec = m.group(2).upper() if m.group(2) else None

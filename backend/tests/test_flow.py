@@ -207,3 +207,90 @@ def test_roster_matcher():
 def test_parser_backfill_dates():
     r = parse("Monday class 3 22 present. Tuesday class 3 24 present, meals 24.", date(2026, 11, 11), None)
     assert [(c.record_date, c.present) for c in r.classes] == [(date(2026, 11, 9), 22), (date(2026, 11, 10), 24)]
+
+
+def _confirm_day(c, h, text, d):
+    rec = note(c, h, text, d)["records"][0]
+    r = c.post(f"/api/records/{rec['id']}/confirm", headers=h, json={"acknowledge_warnings": True})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_followup_flags_absence_streak(c, teacher):
+    """Sita absent on the last 3 recorded days -> flagged; Meena absent once -> not flagged."""
+    today = service.today()
+    days = [today - timedelta(days=i) for i in (4, 3, 2, 1)]
+    _confirm_day(c, teacher, "Class 3, 9 present, Meena absent, 9 meals", days[0])
+    for d in days[1:]:
+        _confirm_day(c, teacher, "Class 3, 9 present, Sita absent, 9 meals", d)
+    res = c.get("/api/followup", headers=teacher).json()
+    names = {ch["name"]: ch for ch in res["children"]}
+    assert "Sita Kumari" in names and "Meena Kumari" not in names
+    sita = names["Sita Kumari"]
+    assert sita["streak"] == 3 and sita["days_absent"] == 3 and sita["days_recorded"] == 4
+    assert sita["reasons"][0] == "absent the last 3 school days"
+
+
+def test_followup_ignores_drafts(c, teacher):
+    today = service.today()
+    for i in (3, 2, 1):
+        note(c, teacher, "Class 3, 9 present, Sita absent, 9 meals", today - timedelta(days=i))  # never confirmed
+    assert c.get("/api/followup", headers=teacher).json()["children"] == []
+
+
+def test_readback_text_and_disabled_without_key(c, teacher):
+    from app import speech
+    from app.db import DailyRecord, SessionLocal
+    rec = note(c, teacher, "Class 3, 8 present, Sita and Arjun absent, 9 meals")["records"][0]
+    db = SessionLocal()
+    r = db.get(DailyRecord, rec["id"])
+    en = speech.summary_text(r, ["Sita Kumari", "Arjun Yadav"], ["Meals are more than present."], "en")
+    assert en.startswith("Class 3. 8 present. 2 absent: Sita Kumari and Arjun Yadav. 9 meals served.")
+    assert "Please check: Meals are more than present." in en
+    hi = speech.summary_text(r, ["Sita Kumari"], [], "hi")
+    assert hi.startswith("कक्षा 3। 8 बच्चे आए।") and hi.endswith("क्या यह सही है?")
+    db.close()
+    # No Sarvam key in tests: the route fails politely instead of crashing.
+    assert c.get(f"/api/records/{rec['id']}/speech", headers=teacher).status_code == 503
+
+
+def test_report_download_survives_lost_file(c, teacher):
+    from pathlib import Path
+    from app.db import Report, SessionLocal
+    month = service.today().strftime("%Y-%m")
+    rep = c.post("/api/reports", headers=teacher, json={"kind": "summary", "month": month}).json()
+    db = SessionLocal()
+    Path(db.get(Report, rep["id"]).file_uri).unlink()
+    db.close()
+    r = c.get(rep["download_url"], headers=teacher)
+    assert r.status_code == 200 and r.content[:4] == b"%PDF"
+
+
+def test_llm_date_cannot_override_picked_day(monkeypatch):
+    """A model that invents TODAY must not move a note the teacher filed under another day."""
+    import asyncio
+    from app import llm
+    from app.pipeline import extract as ex
+    today, picked = date(2026, 11, 6), date(2026, 11, 3)
+
+    async def fake_chat(system, user):
+        return {"record_date": "2026-11-06", "classes": [{"grade": 3, "present": 20, "record_date": "2026-11-06"}]}
+
+    monkeypatch.setattr(llm, "enabled", lambda: True)
+    monkeypatch.setattr(llm, "chat_json", fake_chat)
+    rec, _ = asyncio.run(ex.extract("Class 3, 20 present", today, picked, []))
+    assert rec.classes[0].record_date == picked
+    rec, _ = asyncio.run(ex.extract("Yesterday class 3, 20 present", today, picked, []))
+    assert rec.classes[0].record_date == date(2026, 11, 6)  # a spoken day is still trusted
+
+
+def test_stats_exclude_demo_account(c, teacher, monkeypatch):
+    from app import config
+    before = c.get("/stats", headers={"Accept": "application/json"}).json()["notes_processed"]
+    note(c, teacher, "Class 3, 9 present, Sita absent, 9 meals")
+    assert c.get("/stats").json()["notes_processed"] == before + 1
+    # Mark every test teacher's phone as the demo account: their usage disappears from public impact.
+    phones = {f"98765{i:05d}" for i in range(100)}
+    monkeypatch.setattr(config, "DEMO_PHONES", phones)
+    s = c.get("/stats").json()
+    assert s["notes_processed"] <= before and s["excludes_demo_account"] is True
