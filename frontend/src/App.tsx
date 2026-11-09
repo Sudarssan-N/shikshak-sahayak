@@ -9,6 +9,7 @@ import RecordsPage from "./features/dashboard/RecordsPage";
 import RecordDetailPage from "./features/dashboard/RecordDetailPage";
 import ReportsPage from "./features/dashboard/ReportsPage";
 import SettingsPage from "./features/dashboard/SettingsPage";
+import LevelsPage from "./features/dashboard/LevelsPage";
 import AdminPage from "./features/admin/AdminPage";
 import StatsPage from "./features/stats/StatsPage";
 
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/records/:id" element={<RecordDetailPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/levels" element={<LevelsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

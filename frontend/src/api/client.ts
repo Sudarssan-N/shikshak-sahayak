@@ -1,5 +1,13 @@
 import type {
+  ClassLevels,
   FollowUp,
+  FollowUpActionKind,
+  FollowUpActionLog,
+  FollowUpOutcome,
+  FollowUpReason,
+  MdmToday,
+  ParentMessage,
+  ParsedLevels,
   AdminTeacher,
   ClassRoster,
   DailyRecord,
@@ -135,6 +143,33 @@ export const api = {
   speechUrl: (id: string, version: number) =>
     `/api/records/${id}/speech?v=${version}&token=${encodeURIComponent(session.token ?? "")}`,
   followUp: () => request<FollowUp>("/api/followup"),
+  parentMessage: (studentId: string) => request<ParentMessage>(`/api/followup/${studentId}/message`),
+  parentMessageSpeechUrl: (studentId: string) =>
+    `/api/followup/${studentId}/message/speech?token=${encodeURIComponent(session.token ?? "")}`,
+  setParentPhone: (studentId: string, phone: string) =>
+    request<{ ok: boolean; phone: string }>(`/api/students/${studentId}/contact`, { method: "PUT", body: json({ phone }) }),
+  logFollowUp: (
+    studentId: string,
+    body: { action: FollowUpActionKind; reason?: FollowUpReason | null; outcome?: FollowUpOutcome | null; note?: string },
+  ) => request<FollowUpActionLog>(`/api/followup/${studentId}/actions`, { method: "POST", body: json(body) }),
+  mdmToday: () => request<MdmToday>("/api/mdm/today"),
+  levels: (classId: string, month?: string) =>
+    request<ClassLevels>(`/api/levels?class_id=${classId}${month ? `&month=${month}` : ""}`),
+  parseLevels: (classId: string, input: { text?: string; audio?: Blob }) => {
+    const fd = new FormData();
+    fd.append("class_id", classId);
+    if (input.text) fd.append("text", input.text);
+    if (input.audio) {
+      const ext = input.audio.type.includes("ogg") ? "ogg" : input.audio.type.includes("mp4") ? "m4a" : "webm";
+      fd.append("audio", input.audio, `levels.${ext}`);
+    }
+    return request<ParsedLevels>("/api/levels/parse", { method: "POST", body: fd });
+  },
+  saveLevels: (
+    classId: string,
+    items: { student_id: string; reading: string | null; maths: string | null }[],
+    source: "tap" | "voice",
+  ) => request<ClassLevels>("/api/levels", { method: "PUT", body: json({ class_id: classId, items, source }) }),
   timeSaved: (id: string, minutes: number) =>
     request<{ ok: boolean }>(`/api/records/${id}/time-saved`, { method: "POST", body: json({ minutes }) }),
 

@@ -45,8 +45,8 @@ def main():
     lesson3, lesson5 = 3, 5
     while day < service.today():
         if day.weekday() != 6:
-            a3 = rnd.sample(names3, rnd.choice([0, 1, 1, 2]))
-            a5 = rnd.sample(names5, rnd.choice([0, 0, 1, 1, 2]))
+            a3 = rnd.sample([n for n in names3 if n != "Kavita"], rnd.choice([0, 0, 1, 1, 2]))
+            a5 = rnd.sample([n for n in names5 if n != "Kunal"], rnd.choice([0, 0, 0, 1, 1]))
             # Two realistic early-warning cases for the follow-up list: Kunal stops coming for the last 4 school
             # days, and Kavita misses about half the days.
             if (service.today() - day).days <= 5 and "Kunal" not in a5:
@@ -75,6 +75,22 @@ def main():
                 db.commit()
                 _ = c_rec
         day += timedelta(days=1)
+    # This month's reading/maths levels, so the TaRL groups and the combined follow-up flag have data. No parent
+    # phone numbers are seeded: a tap on "SMS" in the demo must never reach a real person.
+    from app.db import FollowUpAction, LearningLevel
+    from app.levels import MATHS, READING
+    month = service.today().strftime("%Y-%m")
+    for k in teacher.classes:
+        for e in service.roster(k):
+            first = e.name.split()[0]
+            r = {"Kavita": 1, "Neha": 2, "Kunal": 1}.get(first, rnd.choice([1, 2, 2, 3, 3, 4, 4, 4]))
+            m = max(0, min(4, r + rnd.choice([-1, 0, 0, 1])))
+            db.add(LearningLevel(teacher_id=teacher.id, class_id=k.id, student_id=e.id, month=month,
+                                 reading=READING[r], maths=MATHS[m], source="voice"))
+            if first == "Kavita":
+                db.add(FollowUpAction(teacher_id=teacher.id, student_id=e.id, action="call", reason="work",
+                                      outcome="will_return", created_at=now() - timedelta(days=2)))
+    db.commit()
     print(f"Seeded. Log in at the web app with phone {PHONE} (dev code is shown on screen).")
 
 

@@ -21,6 +21,11 @@ DATABASE_URL = _env("DATABASE_URL", f"sqlite:///{DATA_DIR / 'shikshak.db'}")
 # Real teachers never get their code in the API response; OTP delivery for them is a separate channel.
 DEMO_PHONES = {p.strip() for p in _env("DEMO_PHONES").split(",") if p.strip()}
 
+# Dropout early-warning thresholds (see followup.py for where the defaults come from).
+FOLLOWUP_STREAK_MIN = int(_env("FOLLOWUP_STREAK_MIN", "3"))
+FOLLOWUP_ACT_PCT = int(_env("FOLLOWUP_ACT_PCT", "80"))
+FOLLOWUP_WATCH_MISSED_PCT = int(_env("FOLLOWUP_WATCH_MISSED_PCT", "10"))
+
 SECRET_KEY = _env("SECRET_KEY", "dev-only-change-me")
 ADMIN_KEY = _env("ADMIN_KEY", "dev-admin-key" if DEV_MODE else "")
 TOKEN_MAX_AGE_S = 30 * 24 * 3600

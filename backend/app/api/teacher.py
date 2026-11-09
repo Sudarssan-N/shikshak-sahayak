@@ -8,9 +8,9 @@ from fastapi.responses import FileResponse, Response
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .. import config, followup, service, speech
-from ..db import (Correction, DailyRecord, LoginCode, Report, Student, Teacher, UsageEvent, ValidationFlag,
-                  VoiceNote, get_db, now)
+from .. import config, service, speech
+from ..db import (Correction, DailyRecord, FollowUpAction, LearningLevel, LoginCode, Report, Student,
+                  StudentContact, Teacher, UsageEvent, ValidationFlag, VoiceNote, get_db, now)
 from ..reports import generate as reports
 from ..schemas import ConfirmIn, CorrectionIn, PhoneIn, ReportIn, ResolveNameIn, TimeSavedIn, VerifyIn
 from ..security import code_hash, make_token, new_code, normalize_phone, phone_hash, valid_phone
@@ -89,7 +89,14 @@ def delete_me(t: Teacher = Depends(current_teacher), db: Session = Depends(get_d
         db.delete(rep)
     db.execute(delete(VoiceNote).where(VoiceNote.teacher_id == t.id))
     db.execute(delete(LoginCode).where(LoginCode.phone_hash == t.phone_hash))
+    db.execute(delete(FollowUpAction).where(FollowUpAction.teacher_id == t.id))
+    db.execute(delete(LearningLevel).where(LearningLevel.teacher_id == t.id))
     for k in t.classes:
+        sids = [s.id for s in k.students]
+        if sids:
+            db.execute(delete(StudentContact).where(StudentContact.student_id.in_(sids)))
+            db.execute(delete(FollowUpAction).where(FollowUpAction.student_id.in_(sids)))
+            db.execute(delete(LearningLevel).where(LearningLevel.student_id.in_(sids)))
         db.execute(delete(Student).where(Student.class_id == k.id))
     db.delete(t)
     db.commit()
@@ -168,13 +175,6 @@ async def record_speech(record_id: str, t: Teacher = Depends(current_teacher), d
     db.commit()
     return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=600"})
 
-
-@router.get("/followup")
-def follow_up(t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
-    """Dropout early-warning: children with a run of absences or low attendance in the last 30 days."""
-    items = followup.teacher_concerns(db, t, service.today())
-    return {"window_days": followup.WINDOW_DAYS, "streak_min": followup.STREAK_MIN, "pct_min": followup.PCT_MIN,
-            "children": [c.as_dict() for c in items]}
 
 
 @router.post("/records/{record_id}/corrections")

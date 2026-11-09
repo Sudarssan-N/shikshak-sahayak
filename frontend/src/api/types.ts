@@ -181,11 +181,94 @@ export interface FollowUpChild {
   attendance_pct: number;
   last_present: string | null;
   reasons: string[];
+  tier: "act" | "watch";
+  absent_dates: string[];
+  reading_level: string | null;
+  last_action: FollowUpActionLog | null;
+  has_phone: boolean;
+}
+
+export type FollowUpActionKind = "call" | "visit" | "message" | "spoke_child" | "other";
+export type FollowUpReason =
+  | "illness"
+  | "work"
+  | "migration"
+  | "distance"
+  | "family_event"
+  | "not_interested"
+  | "unknown"
+  | "other";
+export type FollowUpOutcome = "will_return" | "returned" | "unreachable" | "other";
+
+export interface FollowUpActionLog {
+  action: FollowUpActionKind;
+  reason: FollowUpReason | null;
+  outcome: FollowUpOutcome | null;
+  at: string;
+}
+
+export interface ParentMessage {
+  text: string;
+  phone: string | null;
+  sms_url: string;
+  whatsapp_url: string;
+}
+
+export interface MdmToday {
+  date: string;
+  meals: number;
+  present: number;
+  classes_confirmed: number;
+  classes_total: number;
+  complete: boolean;
+  sms_body: string;
+  sms_number: string;
+  sms_url: string;
+  format_note: string;
+}
+
+export interface LevelOption {
+  id: string;
+  label: string;
+}
+
+export interface ChildLevel {
+  student_id: string;
+  name: string;
+  roll_no: number;
+  reading: string | null;
+  maths: string | null;
+}
+
+export interface LevelGroup {
+  level: string;
+  label: string;
+  count: number;
+  children: { student_id: string; name: string; roll_no: number }[];
+}
+
+export interface ClassLevels {
+  class_id: string;
+  month: string;
+  children: ChildLevel[];
+  done: number;
+  total: number;
+  groups: { reading: LevelGroup[]; maths: LevelGroup[] };
+  reading_levels: LevelOption[];
+  maths_levels: LevelOption[];
+}
+
+export interface ParsedLevels {
+  transcript: string;
+  items: { student_id: string; name: string; roll_no: number; reading: string | null; maths: string | null }[];
+  unmatched: { spoken: string; reading: string | null; maths: string | null }[];
 }
 
 export interface FollowUp {
   window_days: number;
   streak_min: number;
   pct_min: number;
+  act_pct: number;
+  watch_missed_pct: number;
   children: FollowUpChild[];
 }

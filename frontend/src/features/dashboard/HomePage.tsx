@@ -3,6 +3,8 @@ import { useAuth } from "../../auth";
 import { EmptyState, ErrorNote, Spinner } from "../../components/ui";
 import { addDays, isWorkingDay, monthKey, monthLabel, ymd } from "./dates";
 import { FollowUpPanel } from "./FollowUpPanel";
+import { MdmCard } from "./MdmCard";
+import { Link } from "react-router-dom";
 import { BackfillNudge, MonthStrip, PracticeNudge, TodayPanel } from "./HomeParts";
 import { RecordRow } from "./RecordRow";
 import { monthStats, needsCheck } from "./recordUtils";
@@ -73,6 +75,8 @@ export default function HomePage() {
         <>
           <TodayPanel classes={teacher.classes} records={todays} />
 
+          <MdmCard />
+
           {data && missingYesterday.length > 0 ? <BackfillNudge date={yesterday} classes={missingYesterday} /> : null}
 
           <section className="db-section" aria-labelledby="db-check-h">
@@ -94,6 +98,19 @@ export default function HomePage() {
           </section>
 
           <FollowUpPanel />
+
+          <Link to="/levels" className="db-levels-link">
+            <span className="db-levels-icon" aria-hidden>
+              अ
+            </span>
+            <span className="db-row-main">
+              <strong>Reading &amp; maths levels</strong>
+              <span className="sub">Say each child’s level once a month. Get Teaching-at-the-Right-Level groups.</span>
+            </span>
+            <svg className="db-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </Link>
 
           <MonthStrip stats={monthStats(records, month)} label={`This month · ${monthLabel(month)}`} />
         </>

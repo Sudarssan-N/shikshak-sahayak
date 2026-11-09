@@ -176,9 +176,10 @@ def summary_pdf(db: Session, t: Teacher, month: str, tpl: dict) -> bytes:
     concerns = followup.teacher_concerns(db, t, end, window_days=(end - start).days)
     story.append(Paragraph("Children to follow up", styles["Heading2"]))
     if concerns:
-        frows = [["Class", "Roll", "Name", "Days absent", "Attendance", "Why"]]
+        frows = [["Class", "Roll", "Name", "Days absent", "Attendance", "Priority", "Why"]]
         frows += [[f"Class {c.grade}{'-' + c.section if c.section else ''}", c.roll_no, c.name,
-                   f"{c.days_absent}/{c.days_recorded}", f"{c.attendance_pct}%", "; ".join(c.reasons)]
+                   f"{c.days_absent}/{c.days_recorded}", f"{c.attendance_pct}%",
+                   "Act" if c.tier == "act" else "Watch", "; ".join(c.reasons)]
                   for c in concerns]
         ft = Table(frows, repeatRows=1)
         ft.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#fff1d6")),
@@ -186,8 +187,8 @@ def summary_pdf(db: Session, t: Teacher, month: str, tpl: dict) -> bytes:
                                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bbbbbb"))]))
         story.append(ft)
     else:
-        story.append(Paragraph("No child was absent 3 school days in a row or below 75% attendance.",
-                               styles["Normal"]))
+        story.append(Paragraph(f"No child was absent {followup.STREAK_MIN} school days in a row or missed "
+                               f"{followup.WATCH_MISSED_PCT}% or more of recorded days.", styles["Normal"]))
     story += [Spacer(1, 12),
               Paragraph(f"Working days in month (Mon–Sat): {working}. Days with no confirmed record are left "
                         f"blank in the registers.", styles["Normal"]),

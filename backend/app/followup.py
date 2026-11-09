@@ -1,21 +1,26 @@
 """Dropout early-warning: children who keep missing school, from the teacher's own confirmed records.
 
-Deterministic and explainable. A child is flagged when either holds:
-- absent on the last STREAK_MIN recorded school days for their class in a row, or
-- attendance below PCT_MIN over the window, once the class has at least MIN_DAYS recorded days.
-Only confirmed records count, so drafts never raise an alarm.
+Deterministic and explainable, in two tiers (thresholds are configurable, see config.py):
+- act:   absent on the last STREAK_MIN recorded school days in a row, or attendance below ACT_PCT
+- watch: missed WATCH_MISSED_PCT or more of recorded days (the usual "chronic absence" line)
+Percentages need at least MIN_DAYS recorded days. Only confirmed records count, so drafts never raise an alarm.
+The defaults come from US evidence (chronic absence = 10%+ days missed; Balfanz's <80% early-warning signal); no
+Indian study has validated a threshold, so treat them as starting points and tune them per pilot.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import config
 from .db import ClassSection, DailyRecord, Teacher
 from .security import decrypt_name
 
-STREAK_MIN = 3
-PCT_MIN = 75
+STREAK_MIN = config.FOLLOWUP_STREAK_MIN
+ACT_PCT = config.FOLLOWUP_ACT_PCT
+WATCH_MISSED_PCT = config.FOLLOWUP_WATCH_MISSED_PCT
+PCT_MIN = ACT_PCT  # kept for older callers
 MIN_DAYS = 5
 WINDOW_DAYS = 30
 
@@ -34,6 +39,8 @@ class Concern:
     attendance_pct: int
     last_present: date | None
     reasons: list[str]
+    tier: str = "act"  # act | watch
+    absent_dates: list[date] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {"student_id": self.student_id, "name": self.name, "roll_no": self.roll_no,
@@ -41,7 +48,8 @@ class Concern:
                 "streak": self.streak, "days_absent": self.days_absent, "days_recorded": self.days_recorded,
                 "attendance_pct": self.attendance_pct,
                 "last_present": self.last_present.isoformat() if self.last_present else None,
-                "reasons": self.reasons}
+                "reasons": self.reasons, "tier": self.tier,
+                "absent_dates": [d.isoformat() for d in self.absent_dates[-5:]]}
 
 
 def _class_records(db: Session, k: ClassSection, start: date, end: date) -> list[DailyRecord]:
@@ -76,14 +84,20 @@ def class_concerns(db: Session, k: ClassSection, end: date, window_days: int = W
         pct = round(100 * (len(recs) - days_absent) / len(recs))
         last_present = next((r.record_date for r, a in zip(reversed(recs), reversed(absent_flags)) if not a), None)
         reasons = []
+        enough = len(recs) >= MIN_DAYS
         if streak >= STREAK_MIN:
             reasons.append(f"absent the last {streak} school days")
-        if len(recs) >= MIN_DAYS and pct < PCT_MIN:
+        if enough and pct < ACT_PCT:
             reasons.append(f"came {pct}% of days this month")
+        tier = "act" if reasons else None
+        if not reasons and enough and (100 - pct) >= WATCH_MISSED_PCT:
+            reasons.append(f"missed {days_absent} of {len(recs)} days")
+            tier = "watch"
         if reasons:
+            absent_dates = [r.record_date for r, a in zip(recs, absent_flags) if a]
             out.append(Concern(s.id, decrypt_name(s.name_enc), s.roll_no, k.id, k.grade, k.section, streak,
-                               days_absent, len(recs), pct, last_present, reasons))
-    out.sort(key=lambda c: (-c.streak, c.attendance_pct, c.roll_no))
+                               days_absent, len(recs), pct, last_present, reasons, tier, absent_dates))
+    out.sort(key=_rank)
     return out
 
 
@@ -91,5 +105,9 @@ def teacher_concerns(db: Session, t: Teacher, end: date, window_days: int = WIND
     out: list[Concern] = []
     for k in t.classes:
         out.extend(class_concerns(db, k, end, window_days))
-    out.sort(key=lambda c: (-c.streak, c.attendance_pct))
+    out.sort(key=_rank)
     return out
+
+
+def _rank(c: Concern):
+    return (c.tier != "act", -c.streak, c.attendance_pct, c.roll_no)

@@ -183,6 +183,42 @@ class UsageEvent(Base):
     value: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class StudentContact(Base):
+    """A parent's phone for absence follow-up. Encrypted like names; entered by the teacher, never shared."""
+    __tablename__ = "student_contacts"
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), primary_key=True)
+    phone_enc: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class FollowUpAction(Base):
+    """What the teacher did about a child who keeps missing school, and what they learned."""
+    __tablename__ = "followup_actions"
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=uid)
+    teacher_id: Mapped[str] = mapped_column(ForeignKey("teachers.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    action: Mapped[str] = mapped_column(String(16))  # call | visit | message | spoke_child | other
+    reason: Mapped[str | None] = mapped_column(String(16), nullable=True)  # illness | work | migration | ...
+    outcome: Mapped[str | None] = mapped_column(String(16), nullable=True)  # will_return | returned | unreachable
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class LearningLevel(Base):
+    """One ASER-style reading and maths level per child per month, said or tapped by the teacher."""
+    __tablename__ = "learning_levels"
+    __table_args__ = (UniqueConstraint("student_id", "month"),)
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=uid)
+    teacher_id: Mapped[str] = mapped_column(ForeignKey("teachers.id"), index=True)
+    class_id: Mapped[str] = mapped_column(ForeignKey("class_sections.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    month: Mapped[str] = mapped_column(String(7))
+    reading: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    maths: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    source: Mapped[str] = mapped_column(String(8), default="tap")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 def init_db():
     Base.metadata.create_all(engine)
 

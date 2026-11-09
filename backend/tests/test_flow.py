@@ -307,3 +307,106 @@ def test_demo_phone_code_shown_in_any_format(c, monkeypatch):
         assert "dev_code" in c.post("/api/auth/request-code", json={"phone": fmt}).json(), fmt
     monkeypatch.setattr(config, "DEMO_PHONES", set())
     assert "dev_code" not in c.post("/api/auth/request-code", json={"phone": "7339113033"}).json()
+
+
+# ---------------------------------------------------------------- MDM count, follow-up loop, levels
+
+def test_mdm_today_totals_confirmed_classes(c, teacher):
+    d = service.today()
+    _confirm_day(c, teacher, "Class 3, 9 present, Sita absent, 9 meals", d)
+    m = c.get("/api/mdm/today", headers=teacher).json()
+    assert m["meals"] == 9 and m["classes_confirmed"] == 1 and m["classes_total"] == 2 and not m["complete"]
+    assert m["sms_body"] == "MDM 9" and m["sms_url"].startswith("sms:?body=MDM%209")
+    note(c, teacher, "Class 5, 2 present, 2 meals", d)  # a draft never counts
+    assert c.get("/api/mdm/today", headers=teacher).json()["meals"] == 9
+
+
+def test_followup_tiers_and_parent_loop(c, teacher):
+    today = service.today()
+    days = [today - timedelta(days=i) for i in range(10, 0, -1)]  # 10 recorded days
+    for i, d in enumerate(days):
+        absent = ["Sita"] if i >= 7 else []          # Sita: last 3 days in a row -> act
+        if i == 2:
+            absent.append("Neha")                     # Neha: 1 of 10 missed = 10% -> watch
+        text = f"Class 3, {10 - len(absent)} present" + (f", {' and '.join(absent)} absent" if absent else "") + \
+            f", {10 - len(absent)} meals"
+        _confirm_day(c, teacher, text, d)
+    res = c.get("/api/followup", headers=teacher).json()
+    by = {ch["name"]: ch for ch in res["children"]}
+    assert by["Sita Kumari"]["tier"] == "act" and by["Neha Bind"]["tier"] == "watch"
+    assert res["children"][0]["name"] == "Sita Kumari"  # act before watch
+    sita = by["Sita Kumari"]["student_id"]
+
+    msg = c.get(f"/api/followup/{sita}/message", headers=teacher).json()
+    assert "absent 3 of the last 10 school days" in msg["text"] and msg["phone"] is None
+    assert c.put(f"/api/students/{sita}/contact", headers=teacher, json={"phone": "12345"}).status_code == 422
+    assert c.put(f"/api/students/{sita}/contact", headers=teacher, json={"phone": "+91 98111 22333"}).json()["ok"]
+    msg = c.get(f"/api/followup/{sita}/message", headers=teacher).json()
+    assert msg["phone"] == "9811122333" and msg["whatsapp_url"].startswith("https://wa.me/919811122333?text=")
+
+    assert c.post(f"/api/followup/{sita}/actions", headers=teacher, json={"action": "dance"}).status_code == 422
+    c.post(f"/api/followup/{sita}/actions", headers=teacher,
+           json={"action": "call", "reason": "illness", "outcome": "will_return"})
+    res = c.get("/api/followup", headers=teacher).json()
+    s = next(ch for ch in res["children"] if ch["student_id"] == sita)
+    assert s["last_action"]["action"] == "call" and s["has_phone"] is True
+    # Another teacher can't touch this child
+    other = c.post("/admin/teachers", headers=ADMIN, json={"name": "O", "phone": "9123400000", "language": "en",
+                                                            "school_name": "S", "state": "UP",
+                                                            "classes": [{"grade": 1}]}).json()
+    code = c.post("/api/auth/request-code", json={"phone": "9123400000"}).json()["dev_code"]
+    oh = {"Authorization": "Bearer " + c.post("/api/auth/verify", json={"phone": "9123400000", "code": code}).json()["token"]}
+    assert c.get(f"/api/followup/{sita}/message", headers=oh).status_code == 404
+    assert other["id"]
+
+
+def test_levels_parse_english_and_hindi():
+    from app import levels
+    roster = [RosterEntry("m", 1, "Meena Kumari"), RosterEntry("r", 2, "Ravi Kumar"), RosterEntry("s", 3, "Sita Devi")]
+    p = levels.parse("Meena story subtraction, Ravi letters 1 to 9. Sita reads words and can do 10 to 99", roster)
+    got = {i["student_id"]: (i["reading"], i["maths"]) for i in p.items}
+    assert got == {"m": ("story", "subtraction"), "r": ("letter", "num_1_9"), "s": ("word", "num_10_99")}
+    p = levels.parse("मीना कहानी भाग, रवि अक्षर एक अंक, Gopal story", roster)
+    got = {i["student_id"]: (i["reading"], i["maths"]) for i in p.items}
+    assert got == {"m": ("story", "division"), "r": ("letter", "num_1_9")}
+    assert p.unmatched[0]["spoken"] == "gopal"  # never guesses an unknown child
+    p = levels.parse("Ravi beginner beginner", roster)
+    assert (p.items[0]["reading"], p.items[0]["maths"]) == ("beginner", "beginner")
+
+
+def test_levels_save_groups_and_combined_flag(c, teacher):
+    me = c.get("/api/me", headers=teacher).json()
+    k3 = next(k for k in me["classes"] if k["grade"] == 3)
+    parsed = c.post("/api/levels/parse", headers=teacher,
+                    data={"class_id": k3["id"], "text": "Sita letters 1 to 9, Meena story division"}).json()
+    assert {i["name"] for i in parsed["items"]} == {"Sita Kumari", "Meena Kumari"}
+    items = [{"student_id": i["student_id"], "reading": i["reading"], "maths": i["maths"]} for i in parsed["items"]]
+    assert c.put("/api/levels", headers=teacher, json={"class_id": k3["id"], "items": [
+        {"student_id": items[0]["student_id"], "reading": "fluent"}]}).status_code == 422
+    lv = c.put("/api/levels", headers=teacher, json={"class_id": k3["id"], "source": "voice", "items": items}).json()
+    assert lv["done"] == 2 and lv["total"] == 10
+    assert [g["level"] for g in lv["groups"]["reading"]] == ["letter", "story"]
+    # Sita is absent 3 days in a row and reads at letter level: the reason says so
+    today = service.today()
+    for i in (3, 2, 1):
+        _confirm_day(c, teacher, "Class 3, 9 present, Sita absent, 9 meals", today - timedelta(days=i))
+    sita = next(ch for ch in c.get("/api/followup", headers=teacher).json()["children"] if ch["name"] == "Sita Kumari")
+    assert "reads at letters level" in sita["reasons"] and sita["reading_level"] == "letter"
+
+
+def test_delete_me_removes_followup_and_levels(c, teacher):
+    from app.db import FollowUpAction, LearningLevel, SessionLocal, StudentContact
+    me = c.get("/api/me", headers=teacher).json()
+    k3 = next(k for k in me["classes"] if k["grade"] == 3)
+    kid = c.get(f"/api/levels?class_id={k3['id']}", headers=teacher).json()["children"][0]["student_id"]
+    c.put("/api/levels", headers=teacher, json={"class_id": k3["id"], "items": [{"student_id": kid, "reading": "word"}]})
+    c.put(f"/api/students/{kid}/contact", headers=teacher, json={"phone": "9811122333"})
+    db = SessionLocal()
+    assert db.get(StudentContact, kid) is not None
+    db.close()
+    assert c.delete("/api/me", headers=teacher).json()["deleted"]
+    db = SessionLocal()
+    assert db.get(StudentContact, kid) is None
+    assert db.query(LearningLevel).filter_by(student_id=kid).count() == 0
+    assert db.query(FollowUpAction).filter_by(student_id=kid).count() == 0
+    db.close()

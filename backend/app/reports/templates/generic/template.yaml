@@ -25,3 +25,9 @@ csv:
     - [absent, absent]
     - [meals_served, meals_served]
     - [lessons, lessons]
+mdm_sms:
+  # Daily meal count for the PM POSHAN SMS/IVRS reporting system. The short code and message format differ by state;
+  # a state template sets them. Left blank here so the teacher's phone asks for the number instead of guessing.
+  number: ""
+  body: "MDM {meals}"
+  note: "Check your state's MDM SMS format and number before sending."
