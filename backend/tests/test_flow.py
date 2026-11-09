@@ -294,3 +294,16 @@ def test_stats_exclude_demo_account(c, teacher, monkeypatch):
     monkeypatch.setattr(config, "DEMO_PHONES", phones)
     s = c.get("/stats").json()
     assert s["notes_processed"] <= before and s["excludes_demo_account"] is True
+
+
+def test_demo_phone_code_shown_in_any_format(c, monkeypatch):
+    from app import config
+    c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "Demo", "phone": "7339113033", "language": "hi", "school_name": "S", "state": "UP",
+        "classes": [{"grade": 3}]})
+    monkeypatch.setattr(config, "DEV_MODE", False)
+    monkeypatch.setattr(config, "DEMO_PHONES", {"7339113033"})
+    for fmt in ("7339113033", "+91 73391 13033", "+917339113033"):
+        assert "dev_code" in c.post("/api/auth/request-code", json={"phone": fmt}).json(), fmt
+    monkeypatch.setattr(config, "DEMO_PHONES", set())
+    assert "dev_code" not in c.post("/api/auth/request-code", json={"phone": "7339113033"}).json()

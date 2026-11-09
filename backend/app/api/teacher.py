@@ -13,7 +13,7 @@ from ..db import (Correction, DailyRecord, LoginCode, Report, Student, Teacher, 
                   VoiceNote, get_db, now)
 from ..reports import generate as reports
 from ..schemas import ConfirmIn, CorrectionIn, PhoneIn, ReportIn, ResolveNameIn, TimeSavedIn, VerifyIn
-from ..security import code_hash, make_token, new_code, phone_hash, valid_phone
+from ..security import code_hash, make_token, new_code, normalize_phone, phone_hash, valid_phone
 from .deps import current_teacher, own_record
 
 router = APIRouter(prefix="/api")
@@ -39,7 +39,7 @@ def request_code(body: PhoneIn, db: Session = Depends(get_db)):
     db.commit()
     # Delivery channel (SMS / WhatsApp template) is an open decision; in dev the code is returned directly.
     log.info("login code issued phone_hash=%s…", ph[:8])
-    show = config.DEV_MODE or body.phone.strip()[-10:] in config.DEMO_PHONES
+    show = config.DEV_MODE or normalize_phone(body.phone) in {normalize_phone(p) for p in config.DEMO_PHONES}
     return {"sent": True, **({"dev_code": code} if show else {})}
 
 
