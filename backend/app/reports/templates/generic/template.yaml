@@ -10,7 +10,7 @@ attendance:
   columns_right: ["Days present", "Days absent"]
 mdm:
   title: "Mid-Day Meal Register / मध्याह्न भोजन रजिस्टर"
-  columns: ["Date", "Class", "Enrolled", "Present", "Meals served"]
+  columns: ["Date", "Class", "Enrolled", "Present", "Meals served", "Food grain (kg)"]
 summary:
   title: "Monthly Summary"
 csv:

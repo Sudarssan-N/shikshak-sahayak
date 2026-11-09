@@ -13,6 +13,10 @@
   severity: warn
   field: meals_served
   message: "{meals_served} meals served but only {present} present in {klass}."
+- id: V13
+  severity: warn
+  field: meals_served
+  message: "Meals equal the full class roll in {klass}. Check that every child ate."
 - id: V4
   severity: block
   field: absent

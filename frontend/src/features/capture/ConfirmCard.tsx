@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../api/client";
+import { useAuth } from "../../auth";
+import { confirmAtSchool } from "../place";
 import type { DailyRecord, Flag, Language, Severity } from "../../api/types";
 import { Button, classLabel, FlagList, formatDate, StatusBadge } from "../../components/ui";
 import { CheckIcon, MicIcon } from "./Brand";
@@ -24,6 +26,7 @@ function worstFor(flags: Flag[], field: string): Severity | undefined {
 
 /** The confirmation card: what I understood for one class on one day, and the ways to fix it. */
 export function ConfirmCard({ record, language, onUpdated }: Props) {
+  const { teacher } = useAuth();
   const [panel, setPanelRaw] = useState<"none" | "fix" | "edit">("none");
   const setPanel = (p: "none" | "fix" | "edit") => {
     setError(null);
@@ -51,7 +54,7 @@ export function ConfirmCard({ record, language, onUpdated }: Props) {
     setBusy(true);
     setError(null);
     try {
-      onUpdated(await api.confirm(record.id, warns.length > 0 || armed));
+      onUpdated(await confirmAtSchool(record.id, warns.length > 0 || armed, Boolean(teacher?.school.boundary)));
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setError("Something still needs fixing before this can be saved.");
@@ -161,6 +164,9 @@ export function ConfirmCard({ record, language, onUpdated }: Props) {
           <Button block onClick={confirm} loading={busy} disabled={blocked} className={armed ? "cc-confirm-anyway" : "cc-confirm"}>
             <CheckIcon /> {armed ? "Confirm anyway" : "Confirm"}
           </Button>
+          {teacher?.school.boundary && !blocked ? (
+            <p className="muted cap-small cap-center">Your location is checked once, against the school area.</p>
+          ) : null}
           {blocked ? (
             <p className="muted cap-small cap-center">
               {record.unresolved_names.length ? "Answer the question above to continue." : "Fix the red item above to continue."}

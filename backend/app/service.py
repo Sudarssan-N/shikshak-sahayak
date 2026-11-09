@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import asr, config
+from . import asr, config, geo
 from .db import (ClassSection, Correction, DailyRecord, Student, Teacher, UsageEvent, ValidationFlag, VoiceNote,
                  now)
 from .pipeline import extract as extract_mod
@@ -334,7 +334,7 @@ def ser_teacher(db: Session, t: Teacher) -> dict:
                                              DailyRecord.status == "confirmed").count()
     return {"id": t.id, "name": t.name, "language": t.language,
             "school": {"id": t.school.id, "name": t.school.name, "state": t.school.state,
-                       "udise_code": t.school.udise_code},
+                       "udise_code": t.school.udise_code, "boundary": geo.public_boundary(db, t.school_id)},
             "classes": [ser_class(k) for k in t.classes],
             "consent_at": t.consent_at.isoformat() if t.consent_at else None,
             "records_confirmed": confirmed}

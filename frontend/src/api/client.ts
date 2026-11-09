@@ -5,11 +5,18 @@ import type {
   FollowUpActionLog,
   FollowUpOutcome,
   FollowUpReason,
+  GrainStock,
   MdmToday,
   ParentMessage,
   ParsedLevels,
+  AdminSchool,
   AdminTeacher,
   ClassRoster,
+  ClassSection,
+  ClassStudentRow,
+  DutyReport,
+  DutySession,
+  DutyStatus,
   DailyRecord,
   NewTeacher,
   NoteResult,
@@ -17,6 +24,7 @@ import type {
   Report,
   ReportKind,
   RosterUploadResult,
+  SchoolBoundary,
   Stats,
   Teacher,
 } from "./types";
@@ -134,11 +142,18 @@ export const api = {
       method: "POST",
       body: json({ spoken, student_id: studentId }),
     }),
-  confirm: (id: string, acknowledgeWarnings: boolean) =>
+  confirm: (id: string, acknowledgeWarnings: boolean, loc?: { lat: number; lng: number }) =>
     request<DailyRecord>(`/api/records/${id}/confirm`, {
       method: "POST",
-      body: json({ acknowledge_warnings: acknowledgeWarnings }),
+      body: json({ acknowledge_warnings: acknowledgeWarnings, ...(loc ?? {}) }),
     }),
+  duty: () => request<DutyStatus>("/api/duty"),
+  dutyWhere: (loc: { lat: number; lng: number }) =>
+    request<DutyStatus>("/api/duty/where", { method: "POST", body: json(loc) }),
+  dutyIn: (loc: { lat: number; lng: number }) =>
+    request<{ session: DutySession; place: DutyStatus["place"] }>("/api/duty/in", { method: "POST", body: json(loc) }),
+  dutyOut: (loc: { lat: number; lng: number }) =>
+    request<{ session: DutySession; place: DutyStatus["place"] }>("/api/duty/out", { method: "POST", body: json(loc) }),
   /** The card read aloud (mp3). Same query-token auth as report downloads, so an <audio> element can play it. */
   speechUrl: (id: string, version: number) =>
     `/api/records/${id}/speech?v=${version}&token=${encodeURIComponent(session.token ?? "")}`,
@@ -153,6 +168,14 @@ export const api = {
     body: { action: FollowUpActionKind; reason?: FollowUpReason | null; outcome?: FollowUpOutcome | null; note?: string },
   ) => request<FollowUpActionLog>(`/api/followup/${studentId}/actions`, { method: "POST", body: json(body) }),
   mdmToday: () => request<MdmToday>("/api/mdm/today"),
+  grainStock: (month: string) => request<GrainStock>(`/api/mdm/stock?month=${month}`),
+  addGrainReceived: (body: { day: string; kg: number; note?: string }) =>
+    request<GrainStock>("/api/mdm/stock/received", { method: "POST", body: json(body) }),
+  setGrainOpening: (body: { month: string; kg: number; note?: string }) =>
+    request<GrainStock>("/api/mdm/stock/opening", { method: "POST", body: json(body) }),
+  setGrainNorms: (body: { primary_g: number; upper_g: number }, month: string) =>
+    request<GrainStock>(`/api/mdm/norms?month=${month}`, { method: "PUT", body: json(body) }),
+  deleteGrainMovement: (id: string) => request<GrainStock>(`/api/mdm/stock/${id}`, { method: "DELETE" }),
   levels: (classId: string, month?: string) =>
     request<ClassLevels>(`/api/levels?class_id=${classId}${month ? `&month=${month}` : ""}`),
   parseLevels: (classId: string, input: { text?: string; audio?: Blob }) => {
@@ -188,6 +211,42 @@ export const api = {
     fd.append("file", file);
     return request<RosterUploadResult>(`/admin/teachers/${teacherId}/roster`, { method: "POST", body: fd }, true);
   },
+  adminSchools: () => request<AdminSchool[]>("/admin/schools", {}, true),
+  adminSetBoundary: (schoolId: string, body: { lat: number; lng: number; radius_m: number }) =>
+    request<SchoolBoundary>(`/admin/schools/${schoolId}/boundary`, { method: "PUT", body: json(body) }, true),
+  adminClearBoundary: (schoolId: string) =>
+    request<{ cleared: boolean }>(`/admin/schools/${schoolId}/boundary`, { method: "DELETE" }, true),
+  adminAddClass: (teacherId: string, body: { grade: number; section: string | null }) =>
+    request<ClassSection>(`/admin/teachers/${teacherId}/classes`, { method: "POST", body: json(body) }, true),
+  adminStudents: (teacherId: string, classId: string) =>
+    request<{ class: ClassSection; students: ClassStudentRow[] }>(
+      `/admin/teachers/${teacherId}/classes/${classId}/students`,
+      {},
+      true,
+    ),
+  adminAddStudent: (teacherId: string, classId: string, body: { roll_no: number; name: string }) =>
+    request<ClassStudentRow>(`/admin/teachers/${teacherId}/classes/${classId}/students`, {
+      method: "POST",
+      body: json(body),
+    }, true),
+  adminPatchStudent: (
+    teacherId: string,
+    classId: string,
+    studentId: string,
+    body: { roll_no?: number; name?: string; active?: boolean },
+  ) =>
+    request<ClassStudentRow>(`/admin/teachers/${teacherId}/classes/${classId}/students/${studentId}`, {
+      method: "PATCH",
+      body: json(body),
+    }, true),
+  adminDuty: (params: { school_id?: string; from?: string; to?: string }) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]);
+    return request<DutyReport>(`/admin/duty${q.size ? `?${q}` : ""}`, {}, true);
+  },
+  adminCreateDuty: (body: { teacher_id: string; login_at: string; logout_at: string | null; note: string }) =>
+    request<DutySession>("/admin/duty", { method: "POST", body: json(body) }, true),
+  adminPatchDuty: (id: string, body: { login_at: string; logout_at: string | null; note: string }) =>
+    request<DutySession>(`/admin/duty/${id}`, { method: "PATCH", body: json(body) }, true),
 
   // public
   stats: () => request<Stats>("/stats"),

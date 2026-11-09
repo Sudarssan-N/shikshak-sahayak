@@ -31,7 +31,8 @@ export const CONSENT = {
     lines: [
       "We keep your class lists (student names), what you said as text, and the records you confirm.",
       "Your voice recording is deleted after it is turned into text, always within 24 hours.",
-      "Nothing is shared with officials or anyone else. Reports go only to you.",
+      "Your head teacher sees the class list and the times you mark login and logout. Children’s attendance, meals and voice notes stay with you.",
+      "Location is read only when you mark login, logout or confirm a class record, and only to check the school area. The phone does not follow you through the day.",
       "You can delete everything at any time from the Me tab.",
     ],
     agree: "I agree",
@@ -42,7 +43,8 @@ export const CONSENT = {
     lines: [
       "हम आपकी कक्षा की सूची (बच्चों के नाम), आपकी बात का लिखित रूप, और आपके पक्के किए हुए रिकॉर्ड रखते हैं।",
       "आपकी आवाज़ की रिकॉर्डिंग लिखित रूप बनने के बाद मिटा दी जाती है, हमेशा 24 घंटे के अंदर।",
-      "कुछ भी अधिकारियों या किसी और के साथ साझा नहीं किया जाता। रिपोर्ट सिर्फ़ आपको मिलती है।",
+      "आपके प्रधान शिक्षक कक्षा की सूची और आपके लॉगिन-लॉगआउट का समय देख सकते हैं। बच्चों की हाजिरी, भोजन और आवाज़ की नोट सिर्फ़ आपके पास रहती हैं।",
+      "जगह सिर्फ़ उसी समय पढ़ी जाती है जब आप लॉगिन, लॉगआउट या कक्षा का रिकॉर्ड पक्का करते हैं, और सिर्फ़ स्कूल के इलाके की जाँच के लिए। फ़ोन दिन भर आपको फ़ॉलो नहीं करता।",
       "आप कभी भी 'मैं' (Me) टैब से सब कुछ मिटा सकते हैं।",
     ],
     agree: "मैं सहमत हूँ",

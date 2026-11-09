@@ -190,6 +190,7 @@ def base(**kw):
     ("V10", dict(field_confidence={"present": 0.5}), dict(field_confidence={"present": 0.9})),
     ("V11", dict(present=None), dict()),
     ("V12", dict(absent_count_spoken=4), dict(absent_count_spoken=5)),
+    ("V13", dict(meals_served=28, present=28, absent_ids=[]), dict()),
 ])
 def test_rule_fixtures(rule, bad, good):
     assert rule in {f.rule_id for f in validate(base(**bad))}
@@ -394,8 +395,100 @@ def test_levels_save_groups_and_combined_flag(c, teacher):
     assert "reads at letters level" in sita["reasons"] and sita["reading_level"] == "letter"
 
 
+# ---------------------------------------------------------------- school desk: people, hours, geofence
+
+SCHOOL_PIN = {"lat": 26.8467, "lng": 80.9462, "radius_m": 200}
+NEAR_SCHOOL = {"lat": 26.8470, "lng": 80.9462}  # about 30 m north of the pin
+FAR_SCHOOL = {"lat": 26.8700, "lng": 80.9462}   # about 2.6 km north
+
+
+def test_geofence_distance():
+    from app import geo
+    assert geo.haversine_m(26.8467, 80.9462, 26.8467, 80.9462) == 0
+    assert 20 < geo.haversine_m(26.8467, 80.9462, 26.8470, 80.9462) < 60
+    assert geo.haversine_m(26.8467, 80.9462, 26.8700, 80.9462) > 2000
+
+
+def test_admin_adds_class_and_people(c, teacher):
+    me = c.get("/api/me", headers=teacher).json()
+    tid = me["id"]
+    added = c.post(f"/admin/teachers/{tid}/classes", headers=ADMIN, json={"grade": 4, "section": "a"}).json()
+    assert added["grade"] == 4 and added["section"] == "A" and added["enrolled"] == 0
+    assert c.post(f"/admin/teachers/{tid}/classes", headers=ADMIN,
+                  json={"grade": 4, "section": "A"}).status_code == 409
+    stu = c.post(f"/admin/teachers/{tid}/classes/{added['id']}/students", headers=ADMIN,
+                 json={"roll_no": 1, "name": "Gopal Verma"}).json()
+    assert stu["name"] == "Gopal Verma" and stu["active"] is True
+    assert c.post(f"/admin/teachers/{tid}/classes/{added['id']}/students", headers=ADMIN,
+                  json={"roll_no": 1, "name": "Other Child"}).status_code == 409
+    gone = c.patch(f"/admin/teachers/{tid}/classes/{added['id']}/students/{stu['id']}", headers=ADMIN,
+                   json={"active": False}).json()
+    assert gone["active"] is False
+    back = c.post(f"/admin/teachers/{tid}/classes/{added['id']}/students", headers=ADMIN,
+                  json={"roll_no": 1, "name": "Gopal Verma"}).json()
+    assert back["id"] == stu["id"] and back["active"] is True
+    roster = c.get("/api/roster", headers=teacher).json()
+    assert any(s["name"] == "Gopal Verma" for k in roster for s in k["students"])
+    listed = c.get(f"/admin/teachers/{tid}/classes/{added['id']}/students", headers=ADMIN).json()
+    assert listed["students"][0]["name"] == "Gopal Verma"
+    assert c.get("/admin/schools").status_code == 401
+
+
+def test_boundary_gates_login_and_class_attendance(c, teacher):
+    me = c.get("/api/me", headers=teacher).json()
+    sid = me["school"]["id"]
+    assert me["school"]["boundary"] is None
+    assert c.post("/api/duty/in", headers=teacher, json=NEAR_SCHOOL).status_code == 409
+
+    # No circle yet: class attendance still confirms without a location.
+    today = service.today()
+    rec = note(c, teacher, "Class 5 2 present, meals 2", today)["records"][0]
+    assert c.post(f"/api/records/{rec['id']}/confirm", headers=teacher,
+                  json={"acknowledge_warnings": True}).status_code == 200
+
+    pin = c.put(f"/admin/schools/{sid}/boundary", headers=ADMIN, json=SCHOOL_PIN).json()
+    assert pin["radius_m"] == 200
+    schools = c.get("/admin/schools", headers=ADMIN).json()
+    assert next(s for s in schools if s["id"] == sid)["boundary"]["radius_m"] == 200
+
+    far = c.post("/api/duty/in", headers=teacher, json=FAR_SCHOOL)
+    assert far.status_code == 403 and "m from the school" in far.json()["detail"]
+    inn = c.post("/api/duty/in", headers=teacher, json=NEAR_SCHOOL).json()
+    assert inn["place"]["inside"] is True and inn["session"]["open"] is True
+    assert c.post("/api/duty/in", headers=teacher, json=NEAR_SCHOOL).status_code == 409
+
+    yesterday = today - timedelta(days=1)
+    rec = note(c, teacher, "Class 5 2 present, meals 2", yesterday)["records"][0]
+    blocked = c.post(f"/api/records/{rec['id']}/confirm", headers=teacher,
+                     json={"acknowledge_warnings": True, **FAR_SCHOOL})
+    assert blocked.status_code == 403
+    missing = c.post(f"/api/records/{rec['id']}/confirm", headers=teacher, json={"acknowledge_warnings": True})
+    assert missing.status_code == 400
+    saved = c.post(f"/api/records/{rec['id']}/confirm", headers=teacher,
+                   json={"acknowledge_warnings": True, **NEAR_SCHOOL})
+    assert saved.status_code == 200, saved.text
+
+    assert c.post("/api/duty/out", headers=teacher, json=FAR_SCHOOL).status_code == 403
+    out = c.post("/api/duty/out", headers=teacher, json=NEAR_SCHOOL).json()
+    assert out["session"]["open"] is False
+
+    # Head teacher corrects the hours, and can add a row when a punch was missed.
+    edited = c.patch(f"/admin/duty/{out['session']['id']}", headers=ADMIN, json={
+        "login_at": "2026-10-01T08:00:00", "logout_at": "2026-10-01T14:30:00",
+        "note": "Corrected from the register"}).json()
+    assert edited["edited"] is True and edited["hours"] == 6.5 and edited["source"] == "gate"
+    report = c.get("/admin/duty", headers=ADMIN, params={"school_id": sid, "from": "2026-10-01", "to": "2026-10-01"}).json()
+    assert report["sessions"][0]["id"] == edited["id"] and report["hours_closed"] == 6.5
+    added = c.post("/admin/duty", headers=ADMIN, json={
+        "teacher_id": me["id"], "login_at": "2026-10-02T09:00:00", "logout_at": "2026-10-02T13:00:00",
+        "note": "Forgot to mark login"}).json()
+    assert added["source"] == "admin" and added["hours"] == 4
+    assert c.delete(f"/admin/schools/{sid}/boundary", headers=ADMIN).json()["cleared"] is True
+    assert c.get("/api/me", headers=teacher).json()["school"]["boundary"] is None
+
+
 def test_delete_me_removes_followup_and_levels(c, teacher):
-    from app.db import FollowUpAction, LearningLevel, SessionLocal, StudentContact
+    from app.db import FollowUpAction, GrainMovement, LearningLevel, SessionLocal, StudentContact
     me = c.get("/api/me", headers=teacher).json()
     k3 = next(k for k in me["classes"] if k["grade"] == 3)
     kid = c.get(f"/api/levels?class_id={k3['id']}", headers=teacher).json()["children"][0]["student_id"]
@@ -404,9 +497,162 @@ def test_delete_me_removes_followup_and_levels(c, teacher):
     db = SessionLocal()
     assert db.get(StudentContact, kid) is not None
     db.close()
+    assert c.post("/api/mdm/stock/received", headers=teacher,
+                  json={"day": service.today().isoformat(), "kg": 2}).status_code == 200
     assert c.delete("/api/me", headers=teacher).json()["deleted"]
     db = SessionLocal()
+    assert db.query(GrainMovement).filter_by(teacher_id=me["id"]).count() == 0
     assert db.get(StudentContact, kid) is None
     assert db.query(LearningLevel).filter_by(student_id=kid).count() == 0
     assert db.query(FollowUpAction).filter_by(student_id=kid).count() == 0
     db.close()
+
+
+def test_grain_stock_from_confirmed_meals(c, teacher):
+    """Classes 1–5 use 100 g, classes 6–8 use 150 g. Closing exists only after an opening entry."""
+    from io import BytesIO
+    from openpyxl import load_workbook
+    me = c.get("/api/me", headers=teacher).json()
+    added = c.post(f"/admin/teachers/{me['id']}/classes", headers=ADMIN, json={"grade": 8}).json()
+    for roll, name in ((1, "Gita Rao"), (2, "Hari Lal")):
+        assert c.post(f"/admin/teachers/{me['id']}/classes/{added['id']}/students", headers=ADMIN,
+                      json={"roll_no": roll, "name": name}).status_code == 200
+    d = service.today()
+    _confirm_day(c, teacher, "Class 3, 10 present, meals 10", d)  # 1.0 kg at 100 g
+    rec5 = note(c, teacher, "Class 5, 2 present, meals 2", d)["records"][0]
+    assert "V13" in open_rules(rec5)
+    assert c.post(f"/api/records/{rec5['id']}/confirm", headers=teacher, json={"acknowledge_warnings": True}).status_code == 200
+    _confirm_day(c, teacher, "Class 8, 2 present, meals 2", d)  # 0.3 kg at 150 g
+    note(c, teacher, "Class 3, 8 present, meals 8", d - timedelta(days=1))  # draft: must not count
+
+    month = d.strftime("%Y-%m")
+    s = c.get("/api/mdm/stock", headers=teacher, params={"month": month}).json()
+    by = {row["grade"]: row for row in s["classes"]}
+    assert by[3]["grams"] == 100 and by[3]["kg"] == 1.0
+    assert by[5]["grams"] == 100 and by[5]["kg"] == 0.2
+    assert by[8]["grams"] == 150 and by[8]["kg"] == 0.3
+    assert s["consumed_kg"] == 1.5 and s["opening_kg"] is None and s["closing_kg"] is None
+    assert s["norms"]["primary_g"] == 100 and s["norms"]["upper_g"] == 150
+
+    s = c.post("/api/mdm/stock/opening", headers=teacher, json={"month": month, "kg": 10}).json()
+    s = c.post("/api/mdm/stock/received", headers=teacher, json={"day": d.isoformat(), "kg": 5, "note": "FCI"}).json()
+    assert s["opening_kg"] == 10 and s["received_kg"] == 5 and s["closing_kg"] == 13.5
+    s = c.post("/api/mdm/stock/opening", headers=teacher, json={"month": month, "kg": 8}).json()
+    assert s["opening_kg"] == 8 and s["closing_kg"] == 11.5
+    assert sum(1 for m in s["movements"] if m["kind"] == "opening") == 1
+
+    s = c.put("/api/mdm/norms", headers=teacher, params={"month": month},
+              json={"primary_g": 200, "upper_g": 150}).json()
+    by = {row["grade"]: row for row in s["classes"]}
+    assert by[3]["kg"] == 2.0 and by[5]["kg"] == 0.4 and by[8]["kg"] == 0.3
+    assert s["consumed_kg"] == 2.7 and s["closing_kg"] == 10.3
+
+    rep = c.post("/api/reports", headers=teacher, json={"kind": "mdm", "month": month}).json()
+    blob = c.get(rep["download_url"], headers=teacher).content
+    ws = load_workbook(BytesIO(blob)).active
+    rows = list(ws.iter_rows(values_only=True))
+    assert rows[1][-1] == "Food grain (kg)"
+    assert any(r[1] == "Class 3" and r[5] == 2.0 for r in rows)
+    assert any(r[1] == "Class 8" and r[5] == 0.3 for r in rows)
+    assert any(r[0] == "Used from confirmed meals, whole school (kg)" and r[1] == 2.7 for r in rows)
+    assert any(r[0] == "Left (kg)" and r[1] == 10.3 for r in rows)
+
+    received = next(m for m in s["movements"] if m["kind"] == "received")
+    other = c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "Other", "phone": "9123499111", "language": "en", "school_name": "Other School", "state": "UP",
+        "classes": [{"grade": 1}]}).json()
+    code = c.post("/api/auth/request-code", json={"phone": "9123499111"}).json()["dev_code"]
+    oh = {"Authorization": "Bearer " + c.post("/api/auth/verify", json={"phone": "9123499111", "code": code}).json()["token"]}
+    assert c.delete(f"/api/mdm/stock/{received['id']}", headers=oh).status_code == 404
+    assert c.get("/api/mdm/stock", headers=oh).json()["consumed_kg"] == 0
+    assert other["id"]
+    s = c.delete(f"/api/mdm/stock/{received['id']}", headers=teacher).json()
+    assert s["received_kg"] == 0 and s["closing_kg"] == 5.3
+
+    assert c.get("/api/mdm/stock", headers=teacher, params={"month": "2026-13"}).status_code == 422
+    assert c.post("/api/mdm/stock/received", headers=teacher, json={"day": d.isoformat(), "kg": 0}).status_code == 422
+    assert c.post("/api/mdm/stock/received", headers=teacher, json={"day": "2099-01-01", "kg": 1}).status_code == 400
+    assert c.put("/api/mdm/norms", headers=teacher, json={"primary_g": 5, "upper_g": 150}).status_code == 422
+
+
+# ---------------------------------------------------------------- shared schools, missed logouts
+
+def _login(c, phone):
+    code = c.post("/api/auth/request-code", json={"phone": phone}).json()["dev_code"]
+    h = {"Authorization": "Bearer " + c.post("/api/auth/verify", json={"phone": phone, "code": code}).json()["token"]}
+    assert c.post("/api/me/consent", headers=h).status_code == 200
+    return h
+
+
+def test_second_teacher_joins_the_same_school(c, teacher):
+    me = c.get("/api/me", headers=teacher).json()
+    sid = me["school"]["id"]
+    picked = c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "Colleague", "phone": "9123477001", "language": "hi", "school_id": sid,
+        "classes": [{"grade": 2}]}).json()
+    assert picked["school"]["id"] == sid
+    same_name = c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "Elsewhere", "phone": "9123477002", "language": "hi", "school_name": me["school"]["name"],
+        "state": me["school"]["state"], "classes": [{"grade": 2}]}).json()
+    assert same_name["school"]["id"] != sid  # a name alone never merges two schools
+    a = c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "U1", "phone": "9123477003", "language": "hi", "school_name": "UDISE School", "state": "UP",
+        "udise_code": "09123400101", "classes": [{"grade": 1}]}).json()
+    b = c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "U2", "phone": "9123477004", "language": "hi", "school_name": "UDISE Sch.", "state": "UP",
+        "udise_code": "09123400101", "classes": [{"grade": 6}]}).json()
+    assert a["school"]["id"] == b["school"]["id"]
+    assert c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "X", "phone": "9123477005", "language": "hi", "school_id": "nope", "classes": [{"grade": 1}]}).status_code == 404
+    assert c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "X", "phone": "9123477006", "language": "hi", "classes": [{"grade": 1}]}).status_code == 422
+    desk = next(s for s in c.get("/admin/schools", headers=ADMIN).json() if s["id"] == sid)
+    assert {t["name"] for t in desk["teachers"]} >= {"Test Teacher", "Colleague"}
+
+
+def test_grain_store_is_shared_by_the_school(c, teacher):
+    me = c.get("/api/me", headers=teacher).json()
+    c.post("/admin/teachers", headers=ADMIN, json={
+        "name": "Grain Colleague", "phone": "9123477011", "language": "en", "school_id": me["school"]["id"],
+        "classes": [{"grade": 7}]})
+    other = _login(c, "9123477011")
+    d = service.today()
+    month = d.strftime("%Y-%m")
+    _confirm_day(c, teacher, "Class 3, 10 present, meals 10", d)  # 1.0 kg
+    c.post("/api/mdm/stock/opening", headers=other, json={"month": month, "kg": 20})
+    mine = c.get("/api/mdm/stock", headers=teacher, params={"month": month}).json()
+    theirs = c.get("/api/mdm/stock", headers=other, params={"month": month}).json()
+    assert mine["consumed_kg"] == theirs["consumed_kg"] == 1.0
+    assert mine["closing_kg"] == theirs["closing_kg"] == 19.0
+    # The colleague leaves: the school's opening entry stays for the teacher who remains.
+    assert c.delete("/api/me", headers=other).json()["deleted"]
+    assert c.get("/api/mdm/stock", headers=teacher, params={"month": month}).json()["opening_kg"] == 20
+
+
+def test_forgotten_logout_is_closed_not_counted(c, teacher):
+    from app.db import DutySession, SessionLocal
+    me = c.get("/api/me", headers=teacher).json()
+    sid = me["school"]["id"]
+    c.put(f"/admin/schools/{sid}/boundary", headers=ADMIN, json=SCHOOL_PIN)
+    first = c.post("/api/duty/in", headers=teacher, json=NEAR_SCHOOL).json()["session"]
+    db = SessionLocal()
+    row = db.get(DutySession, first["id"])
+    row.login_at = row.login_at - timedelta(days=1)  # left open since yesterday
+    db.commit()
+    db.close()
+
+    st = c.get("/api/duty", headers=teacher).json()
+    assert st["open"] is None and st["missed"][0]["id"] == first["id"]
+    assert c.post("/api/duty/out", headers=teacher, json=NEAR_SCHOOL).status_code == 409
+    again = c.post("/api/duty/in", headers=teacher, json=NEAR_SCHOOL)
+    assert again.status_code == 200, again.text
+
+    report = c.get("/admin/duty", headers=ADMIN, params={"school_id": sid}).json()  # today only
+    missed = report["missed"]
+    assert [m["id"] for m in missed] == [first["id"]] and missed[0]["hours"] == 0 and missed[0]["missed_logout"]
+    day = missed[0]["day"]
+    fixed = c.patch(f"/admin/duty/{first['id']}", headers=ADMIN, json={
+        "login_at": f"{day}T08:00:00", "logout_at": f"{day}T14:00:00", "note": "From the staff register"}).json()
+    assert fixed["hours"] == 6 and fixed["edited"]
+    assert c.get("/admin/duty", headers=ADMIN, params={"school_id": sid}).json()["missed"] == []
+    c.delete(f"/admin/schools/{sid}/boundary", headers=ADMIN)

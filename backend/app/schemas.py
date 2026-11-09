@@ -1,5 +1,5 @@
 """Typed contracts. ExtractedRecord is the schema the extractor (LLM or parser) must satisfy (PRD §Data model)."""
-from datetime import date
+from datetime import date, datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -61,6 +61,8 @@ class ResolveNameIn(BaseModel):
 
 class ConfirmIn(BaseModel):
     acknowledge_warnings: bool = False
+    lat: Optional[float] = Field(None, ge=-90, le=90)
+    lng: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class TimeSavedIn(BaseModel):
@@ -81,7 +83,38 @@ class NewTeacher(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     phone: str
     language: Literal["hi", "en", "mr", "kn"] = "hi"
-    school_name: str = Field(min_length=1, max_length=200)
-    state: str = Field(min_length=1, max_length=80)
+    school_id: Optional[str] = Field(None, max_length=16)  # join a school already on the list
+    school_name: Optional[str] = Field(None, max_length=200)  # required when school_id is empty
+    state: Optional[str] = Field(None, max_length=80)
     udise_code: Optional[str] = Field(None, max_length=20)
     classes: list[NewClass] = Field(min_length=1)
+
+
+class BoundaryIn(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    radius_m: int = Field(250, ge=50, le=1500)
+
+
+class PlaceIn(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+
+
+class NewStudent(BaseModel):
+    roll_no: int = Field(ge=1, le=500)
+    name: str = Field(min_length=1, max_length=80)
+
+
+class StudentPatch(BaseModel):
+    roll_no: Optional[int] = Field(None, ge=1, le=500)
+    name: Optional[str] = Field(None, min_length=1, max_length=80)
+    active: Optional[bool] = None
+
+
+class DutyWrite(BaseModel):
+    """Login and logout times. Naive datetimes are read as Asia/Kolkata."""
+    teacher_id: Optional[str] = None  # required on create, ignored on edit
+    login_at: datetime
+    logout_at: Optional[datetime] = None
+    note: str = Field(min_length=3, max_length=200)

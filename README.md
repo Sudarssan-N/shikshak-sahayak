@@ -23,6 +23,13 @@ and they exclude the demo account.
   teacher can confirm by ear.
 - **Dropout early-warning.** Home lists children absent on the last 3 recorded school days in a row, or below
   75% attendance this month, from confirmed records only. The monthly summary PDF carries the same list.
+- **School hours (geofenced).** The head teacher sets a circle around the school. Teachers mark login and logout,
+  and confirm class attendance, only from inside it. Location is read once per tap, never tracked. A login left
+  open past midnight is closed at zero hours and flagged for the head teacher to correct.
+- **Food-grain store.** Confirmed meals become kilos at the PM POSHAN norm (100 g classes 1–5, 150 g classes 6–8),
+  counted across every teacher at the school, against the opening stock and deliveries the teacher enters.
+- **School desk (`/admin/school`).** Class lists, the school circle, and login/logout corrections for each school.
+  Teachers at the same school are onboarded into one school (picked from the list, or matched by UDISE code).
 - **Registers and reports.** Attendance and MDM registers (XLSX), an upload CSV and a monthly summary PDF.
 
 ## Run locally
@@ -33,7 +40,7 @@ cd backend
 uv venv .venv -p 3.11 && uv pip install -p .venv/bin/python -r requirements.txt
 .venv/bin/python -m scripts.seed_demo          # fictional demo teacher, phone 9876500001
 .venv/bin/uvicorn app.main:app --reload --port 8000
-.venv/bin/python -m pytest -q                  # 30 tests, no API keys needed
+.venv/bin/python -m pytest -q                  # 44 tests, no API keys needed
 
 # frontend (dev server on :5173, proxies the API to :8000)
 cd frontend && npm install && npm run dev

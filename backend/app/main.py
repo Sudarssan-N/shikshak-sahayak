@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
-from .api import admin, growth, public, teacher
+from .api import admin, growth, public, school_admin, teacher
 from .db import init_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -22,6 +22,7 @@ if config.DEV_MODE:
 app.include_router(teacher.router)
 app.include_router(growth.router)
 app.include_router(admin.router)
+app.include_router(school_admin.router)
 app.include_router(public.router)
 
 

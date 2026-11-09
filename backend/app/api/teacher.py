@@ -5,14 +5,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from .. import config, service, speech
-from ..db import (Correction, DailyRecord, FollowUpAction, LearningLevel, LoginCode, Report, Student,
-                  StudentContact, Teacher, UsageEvent, ValidationFlag, VoiceNote, get_db, now)
+from .. import config, geo, service, speech
+from ..db import (Correction, DailyRecord, DutySession, FollowUpAction, GrainMovement, LearningLevel, LoginCode,
+                  Report, Student, StudentContact, Teacher, UsageEvent, ValidationFlag, VoiceNote, get_db, now)
 from ..reports import generate as reports
-from ..schemas import ConfirmIn, CorrectionIn, PhoneIn, ReportIn, ResolveNameIn, TimeSavedIn, VerifyIn
+from ..schemas import ConfirmIn, CorrectionIn, PhoneIn, PlaceIn, ReportIn, ResolveNameIn, TimeSavedIn, VerifyIn
 from ..security import code_hash, make_token, new_code, normalize_phone, phone_hash, valid_phone
 from .deps import current_teacher, own_record
 
@@ -89,6 +89,13 @@ def delete_me(t: Teacher = Depends(current_teacher), db: Session = Depends(get_d
         db.delete(rep)
     db.execute(delete(VoiceNote).where(VoiceNote.teacher_id == t.id))
     db.execute(delete(LoginCode).where(LoginCode.phone_hash == t.phone_hash))
+    db.execute(delete(DutySession).where(DutySession.teacher_id == t.id))
+    # Grain entries belong to the school's store. Keep them for the colleagues who still use it.
+    colleague = db.scalars(select(Teacher).where(Teacher.school_id == t.school_id, Teacher.id != t.id)).first()
+    if colleague is not None:
+        db.execute(update(GrainMovement).where(GrainMovement.teacher_id == t.id).values(teacher_id=colleague.id))
+    else:
+        db.execute(delete(GrainMovement).where(GrainMovement.teacher_id == t.id))
     db.execute(delete(FollowUpAction).where(FollowUpAction.teacher_id == t.id))
     db.execute(delete(LearningLevel).where(LearningLevel.teacher_id == t.id))
     for k in t.classes:
@@ -214,10 +221,47 @@ def resolve(record_id: str, body: ResolveNameIn, t: Teacher = Depends(current_te
 @router.post("/records/{record_id}/confirm")
 def confirm(record_id: str, body: ConfirmIn, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
     try:
+        geo.gate_class_attendance(db, t, body.lat, body.lng)
         r = service.confirm(db, own_record(record_id, t, db), body.acknowledge_warnings)
+    except geo.PlaceError as exc:
+        raise HTTPException(exc.status, str(exc))
     except service.UserFacingError as exc:
         _err(exc)
     return service.ser_record(r)
+
+
+def _consented(t: Teacher) -> None:
+    if not t.consent_at:
+        raise HTTPException(403, "Please read and accept the consent note first.")
+
+
+@router.get("/duty")
+def duty(t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    return geo.status(db, t)
+
+
+@router.post("/duty/where")
+def duty_where(body: PlaceIn, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    _consented(t)
+    return geo.where(db, t, body.lat, body.lng)
+
+
+@router.post("/duty/in")
+def duty_in(body: PlaceIn, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    _consented(t)
+    try:
+        return geo.punch_in(db, t, body.lat, body.lng)
+    except geo.PlaceError as exc:
+        raise HTTPException(exc.status, str(exc))
+
+
+@router.post("/duty/out")
+def duty_out(body: PlaceIn, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    _consented(t)
+    try:
+        return geo.punch_out(db, t, body.lat, body.lng)
+    except geo.PlaceError as exc:
+        raise HTTPException(exc.status, str(exc))
 
 
 @router.post("/records/{record_id}/time-saved")

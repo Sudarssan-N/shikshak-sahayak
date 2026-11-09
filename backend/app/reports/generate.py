@@ -17,7 +17,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import config, followup
+from .. import config, followup, grain
 from ..db import DailyRecord, Report, Teacher, ValidationFlag, uid
 from ..service import class_label, roster
 
@@ -101,27 +101,45 @@ def attendance_xlsx(db: Session, t: Teacher, month: str, tpl: dict) -> bytes:
 def mdm_xlsx(db: Session, t: Teacher, month: str, tpl: dict) -> bytes:
     start, end = _month_bounds(month)
     recs = _confirmed(db, t, start, end)
+    snap = grain.stock(db, t, month)
+    primary_g, upper_g = snap["norms"]["primary_g"], snap["norms"]["upper_g"]
     m = tpl["mdm"]
     wb = Workbook()
     ws = wb.active
     ws.title = "MDM"
     ws.append([f"{m['title']} — {start.strftime('%B %Y')} — {t.school.name}"])
     ws["A1"].font = Font(bold=True, size=13)
-    ws.append(m["columns"])
+    columns = list(m["columns"])
+    if "Food grain (kg)" not in columns:
+        columns.append("Food grain (kg)")
+    ws.append(columns)
     for c in ws[2]:
         c.font, c.fill = HEAD, FILL
     tot_p = tot_m = 0
+    tot_g = 0.0
     for r in recs:
-        ws.append([r.record_date.strftime("%d-%m-%Y"), class_label(r.klass), r.enrolled, r.present, r.meals_served])
+        kilos = grain.kg_of(r.meals_served or 0, grain.grams_for(r.klass.grade, primary_g, upper_g))
+        ws.append([r.record_date.strftime("%d-%m-%Y"), class_label(r.klass), r.enrolled, r.present, r.meals_served, kilos])
         tot_p += r.present or 0
         tot_m += r.meals_served or 0
-    ws.append(["Total", "", "", tot_p, tot_m])
+        tot_g = grain.add_kg(tot_g, kilos)
+    ws.append(["Total", "", "", tot_p, tot_m, tot_g])
     for c in ws[ws.max_row]:
         c.font = HEAD
     ws.append([])
+    ws.append(["Food grain this month, school store (rice or wheat)"])
+    ws.append(["Grams per child, classes 1–5", primary_g])
+    ws.append(["Grams per child, classes 6–8", upper_g])
+    ws.append(["School store on the 1st (kg)", "not entered" if snap["opening_kg"] is None else snap["opening_kg"]])
+    ws.append(["Grain arrived (kg)", snap["received_kg"]])
+    ws.append(["Used from confirmed meals, whole school (kg)", snap["consumed_kg"]])
+    left = "enter the 1st to see what is left" if snap["closing_kg"] is None else snap["closing_kg"]
+    ws.append(["Left (kg)", left])
+    ws.append([snap["norms"]["source"]])
+    ws.append([])
     ws.append([_footer(tpl)])
-    ws.column_dimensions["A"].width = 14
-    ws.column_dimensions["B"].width = 12
+    ws.column_dimensions["A"].width = 42
+    ws.column_dimensions["B"].width = 18
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

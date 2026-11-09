@@ -5,11 +5,19 @@ export type Severity = "block" | "warn" | "info";
 export type RecordStatus = "draft" | "flagged" | "confirmed" | "superseded";
 export type ReportKind = "attendance" | "mdm" | "summary" | "csv";
 
+export interface SchoolBoundary {
+  lat: number;
+  lng: number;
+  radius_m: number;
+  updated_at: string;
+}
+
 export interface School {
   id: string;
   name: string;
   state: string;
   udise_code: string | null;
+  boundary: SchoolBoundary | null;
 }
 
 export interface ClassSection {
@@ -135,8 +143,10 @@ export interface NewTeacher {
   name: string;
   phone: string; // 10-digit Indian mobile, digits only
   language: Language;
-  school_name: string;
-  state: string;
+  /** Join a school already on the list. Otherwise school_name and state make a new one. */
+  school_id?: string;
+  school_name?: string;
+  state?: string;
   udise_code?: string;
   classes: { grade: number; section: string | null }[];
 }
@@ -151,6 +161,74 @@ export interface RosterUploadResult {
   accepted: number;
   rejected: RosterRejectedRow[];
   classes: ClassSection[];
+}
+
+export interface AdminSchoolTeacher {
+  id: string;
+  name: string;
+  phone_last4: string;
+  classes: ClassSection[];
+}
+
+export interface AdminSchool {
+  id: string;
+  name: string;
+  state: string;
+  udise_code: string | null;
+  boundary: SchoolBoundary | null;
+  teachers: AdminSchoolTeacher[];
+}
+
+export interface ClassStudentRow {
+  id: string;
+  roll_no: number;
+  name: string;
+  active: boolean;
+}
+
+export interface DutySession {
+  id: string;
+  teacher_id: string;
+  teacher_name: string;
+  school_id: string;
+  login_at: string;
+  logout_at: string | null;
+  hours: number;
+  open: boolean;
+  inside: boolean | null;
+  distance_m: number | null;
+  source: "gate" | "admin";
+  edited: boolean;
+  /** Left open past midnight: closed at zero hours until the head teacher corrects it. */
+  missed_logout: boolean;
+  day: string; // school-local date of the login, YYYY-MM-DD
+  note: string | null;
+}
+
+export interface DutyReport {
+  from: string;
+  to: string;
+  sessions: DutySession[];
+  teachers: number;
+  open_now: number;
+  hours_closed: number;
+  /** Uncorrected missed logouts from the last 14 days, whatever the date range. */
+  missed: DutySession[];
+}
+
+export interface PlaceCheck {
+  inside: boolean;
+  distance_m: number;
+  radius_m: number;
+}
+
+export interface DutyStatus {
+  boundary: SchoolBoundary | null;
+  open: DutySession | null;
+  today: DutySession[];
+  hours_today: number;
+  missed: DutySession[];
+  place?: PlaceCheck | null;
 }
 
 export interface Stats {
@@ -225,6 +303,40 @@ export interface MdmToday {
   sms_number: string;
   sms_url: string;
   format_note: string;
+}
+
+export interface GrainNorms {
+  primary_g: number;
+  upper_g: number;
+  source: string;
+}
+
+export interface GrainClassUse {
+  grade: number;
+  section: string | null;
+  label: string;
+  meals: number;
+  grams: number;
+  kg: number;
+}
+
+export interface GrainMovement {
+  id: string;
+  day: string;
+  kind: "opening" | "received";
+  kg: number;
+  note: string | null;
+}
+
+export interface GrainStock {
+  month: string;
+  norms: GrainNorms;
+  opening_kg: number | null;
+  received_kg: number;
+  consumed_kg: number;
+  closing_kg: number | null;
+  classes: GrainClassUse[];
+  movements: GrainMovement[];
 }
 
 export interface LevelOption {

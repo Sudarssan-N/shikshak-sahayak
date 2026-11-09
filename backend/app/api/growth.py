@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import asr, followup, levels, service, speech
+from .. import asr, followup, grain, levels, service, speech
 from ..db import (DailyRecord, FollowUpAction, LearningLevel, Student, StudentContact, Teacher, get_db, now)
 from ..reports.generate import _template
 from ..security import decrypt_name, encrypt_name, normalize_phone, valid_phone
@@ -57,6 +57,59 @@ def mdm_today(day: date | None = None, t: Teacher = Depends(current_teacher), db
             "sms_body": body, "sms_number": number,
             "sms_url": f"sms:{number}?body={quote(body)}",
             "format_note": tpl.get("note") or "Check your state's MDM SMS format and number before sending."}
+
+
+class GrainReceivedIn(BaseModel):
+    day: date
+    kg: float = Field(gt=0, le=5000)
+    note: str | None = Field(None, max_length=160)
+
+
+class GrainOpeningIn(BaseModel):
+    month: str = Field(min_length=7, max_length=7)
+    kg: float = Field(ge=0, le=5000)
+    note: str | None = Field(None, max_length=160)
+
+
+class GrainNormsIn(BaseModel):
+    primary_g: int = Field(ge=20, le=400)
+    upper_g: int = Field(ge=20, le=400)
+
+
+def _grain(fn):
+    try:
+        return fn()
+    except service.UserFacingError as exc:
+        raise HTTPException(exc.status, str(exc)) from exc
+
+
+@router.get("/mdm/stock")
+def mdm_stock(month: str | None = None, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    """Food grain for the month: confirmed meals × grams, plus opening stock and deliveries the teacher entered."""
+    m = month or service.today().strftime("%Y-%m")
+    return _grain(lambda: grain.stock(db, t, m))
+
+
+@router.post("/mdm/stock/received")
+def mdm_stock_received(body: GrainReceivedIn, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    return _grain(lambda: grain.add_received(db, t, body.day, body.kg, body.note))
+
+
+@router.post("/mdm/stock/opening")
+def mdm_stock_opening(body: GrainOpeningIn, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    return _grain(lambda: grain.set_opening(db, t, body.month, body.kg, body.note))
+
+
+@router.put("/mdm/norms")
+def mdm_norms(body: GrainNormsIn, month: str | None = None, t: Teacher = Depends(current_teacher),
+              db: Session = Depends(get_db)):
+    m = month or service.today().strftime("%Y-%m")
+    return _grain(lambda: grain.set_norms(db, t, body.primary_g, body.upper_g, m))
+
+
+@router.delete("/mdm/stock/{movement_id}")
+def mdm_stock_delete(movement_id: str, t: Teacher = Depends(current_teacher), db: Session = Depends(get_db)):
+    return _grain(lambda: grain.remove(db, t, movement_id))
 
 
 # ------------------------------------------------------------------ absence follow-up

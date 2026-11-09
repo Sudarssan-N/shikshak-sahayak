@@ -76,6 +76,9 @@ def validate(c: Ctx) -> list[FlagOut]:
     # V3
     if c.meals_served is not None and c.present is not None and c.meals_served > c.present:
         out.append(_flag("V3", meals_served=c.meals_served, present=c.present, klass=c.klass))
+    # V13: a meal count copied from the roll is the slip inspectors look for
+    if c.meals_served is not None and c.enrolled and c.meals_served == c.enrolled and c.meals_served > 0:
+        out.append(_flag("V13", klass=c.klass))
     # V4: every absent name resolved
     for u in c.unresolved:
         cands = u.get("candidates") or []

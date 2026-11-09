@@ -777,6 +777,79 @@
   font-size: 0.8rem;
   color: var(--text-2);
 }
+.db-grain-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.db-grain-stats div {
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  text-align: center;
+}
+.db-grain-stats dt {
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+.db-grain-stats dd {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.db-grain-stats dd.short {
+  color: var(--warn);
+}
+.db-grain-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+.db-grain-form label {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.db-grain-grams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.db-grain-grams label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.db-grain-more {
+  font-size: 0.9rem;
+}
+.db-grain-more summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.db-grain-more form {
+  margin-top: 10px;
+}
+.db-grain-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.db-grain-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
 
 /* levels entry on Home */
 .db-levels-link {
@@ -992,4 +1065,50 @@
   padding-bottom: 12px;
   font-size: 0.85rem;
   color: var(--ink-muted);
+}
+
+/* school hours */
+.duty {
+  display: grid;
+  grid-template-columns: 148px 1fr;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 12px 14px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.duty-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.duty-body h2,
+.duty-body p {
+  margin: 0;
+}
+.duty-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+@media (max-width: 420px) {
+  .duty {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .duty-body {
+    width: 100%;
+  }
+}
+
+.duty-missed {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  margin: 0;
 }

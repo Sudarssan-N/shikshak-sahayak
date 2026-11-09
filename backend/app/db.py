@@ -204,6 +204,58 @@ class FollowUpAction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class SchoolBoundary(Base):
+    """One circle around a school, set by the head teacher. Attendance is allowed inside it."""
+    __tablename__ = "school_boundaries"
+    school_id: Mapped[str] = mapped_column(ForeignKey("schools.id"), primary_key=True)
+    lat: Mapped[float] = mapped_column(Float)
+    lng: Mapped[float] = mapped_column(Float)
+    radius_m: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class DutySession(Base):
+    """A teacher's login and logout at the school gate. One open row means they are still there.
+
+    The punch stores whether they were inside the school circle and how far they were, not a trail.
+    """
+    __tablename__ = "duty_sessions"
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=uid)
+    teacher_id: Mapped[str] = mapped_column(ForeignKey("teachers.id"), index=True)
+    school_id: Mapped[str] = mapped_column(ForeignKey("schools.id"), index=True)
+    login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    logout_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    login_inside: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    login_distance_m: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str] = mapped_column(String(8), default="gate")  # gate | admin
+    edited: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Left open past midnight: closed at zero hours, never guessed. The head teacher corrects it.
+    missed_logout: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GrainNorm(Base):
+    """Grams of food grain per child per day. Defaults are the national PM POSHAN figures; a school can change them."""
+    __tablename__ = "grain_norms"
+    school_id: Mapped[str] = mapped_column(ForeignKey("schools.id"), primary_key=True)
+    primary_g: Mapped[int] = mapped_column(Integer, default=100)  # classes 1–5
+    upper_g: Mapped[int] = mapped_column(Integer, default=150)  # classes 6–8
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class GrainMovement(Base):
+    """Rice or wheat the teacher typed: what was in store on the 1st, or a delivery. Consumption is not stored."""
+    __tablename__ = "grain_movements"
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=uid)
+    school_id: Mapped[str] = mapped_column(ForeignKey("schools.id"), index=True)
+    teacher_id: Mapped[str] = mapped_column(ForeignKey("teachers.id"), index=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    kind: Mapped[str] = mapped_column(String(12))  # opening | received
+    kg: Mapped[float] = mapped_column(Float)
+    note: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class LearningLevel(Base):
     """One ASER-style reading and maths level per child per month, said or tapped by the teacher."""
     __tablename__ = "learning_levels"

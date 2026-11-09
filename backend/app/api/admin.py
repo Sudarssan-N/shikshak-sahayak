@@ -1,4 +1,4 @@
-"""Pilot-lead routes. The pilot-lead key can onboard teachers and load rosters but cannot read any record."""
+"""Pilot-lead routes. The key can onboard teachers and load rosters. It cannot read daily records."""
 import csv
 import io
 
@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import service
+from .. import geo, service
 from ..db import ClassSection, School, Student, Teacher, get_db
 from ..schemas import NewTeacher
 from ..security import encrypt_name, normalize_phone, phone_hash, valid_phone
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
 def _ser(db: Session, t: Teacher) -> dict:
     return {"id": t.id, "name": t.name, "phone_last4": t.phone_last4, "language": t.language,
             "school": {"id": t.school.id, "name": t.school.name, "state": t.school.state,
-                       "udise_code": t.school.udise_code},
+                       "udise_code": t.school.udise_code, "boundary": geo.public_boundary(db, t.school_id)},
             "classes": [service.ser_class(k) for k in t.classes],
             "consent_at": t.consent_at.isoformat() if t.consent_at else None,
             "roster_size": sum(1 for k in t.classes for s in k.students if s.active),
@@ -28,6 +28,27 @@ def _ser(db: Session, t: Teacher) -> dict:
 @router.get("/teachers")
 def list_teachers(db: Session = Depends(get_db)):
     return [_ser(db, t) for t in db.scalars(select(Teacher).order_by(Teacher.created_at.desc()))]
+
+
+def _school_for(db: Session, body: NewTeacher) -> School:
+    """Join a chosen school, or the one with the same UDISE code; otherwise make a new one.
+
+    Names alone are never matched: "Primary School Rampur" repeats across a state.
+    """
+    if body.school_id:
+        s = db.get(School, body.school_id)
+        if s is None:
+            raise HTTPException(404, "That school is not on the list.")
+        return s
+    udise = (body.udise_code or "").strip() or None
+    if udise:
+        s = db.scalars(select(School).where(School.udise_code == udise)).first()
+        if s is not None:
+            return s
+    name, state = (body.school_name or "").strip(), (body.state or "").strip()
+    if not name or not state:
+        raise HTTPException(422, "Enter the school name and state, or pick a school already on the list.")
+    return School(name=name, state=state, udise_code=udise)
 
 
 @router.post("/teachers")
@@ -43,7 +64,7 @@ def create_teacher(body: NewTeacher, db: Session = Depends(get_db)):
         if key in seen:
             raise HTTPException(422, f"Class {c.grade}{'-' + c.section if c.section else ''} is listed twice.")
         seen.add(key)
-    school = School(name=body.school_name.strip(), state=body.state.strip(), udise_code=body.udise_code or None)
+    school = _school_for(db, body)
     t = Teacher(name=body.name.strip(), phone_hash=ph, phone_last4=normalize_phone(body.phone)[-4:],
                 language=body.language, school=school)
     t.classes = [ClassSection(grade=g, section=s) for g, s in sorted(seen, key=lambda x: (x[0], x[1] or ""))]

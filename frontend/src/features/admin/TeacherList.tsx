@@ -101,6 +101,7 @@ export function TeacherList() {
                 <th scope="col" className="ad-right">
                   Roster
                 </th>
+                <th scope="col">Area</th>
                 <th scope="col">Consent</th>
                 <th scope="col">
                   <span className="sr-only">Actions</span>
@@ -132,6 +133,13 @@ export function TeacherList() {
                   <td data-label="Roster" className="num ad-right">
                     {t.roster_size ? t.roster_size : <span className="ad-pill ad-pill-warn">No roster</span>}
                   </td>
+                  <td data-label="Area">
+                    {t.school.boundary ? (
+                      <span className="ad-pill ad-pill-good">{t.school.boundary.radius_m} m</span>
+                    ) : (
+                      <span className="ad-pill ad-pill-warn">No area</span>
+                    )}
+                  </td>
                   <td data-label="Consent">
                     {t.consent_at ? (
                       <span className="ad-pill ad-pill-good" title={new Date(t.consent_at).toLocaleString("en-IN")}>
@@ -142,9 +150,13 @@ export function TeacherList() {
                     )}
                   </td>
                   <td data-label="" className="ad-actions">
-                    <Link to={`/admin/teachers/${t.id}/roster`} className="btn btn-secondary ad-btn-sm">
-                      {t.roster_size ? "Update roster" : "Upload roster"}
+                    <Link to={`/admin/school?teacher=${t.id}`} className="btn btn-secondary ad-btn-sm">
+                      Class & hours
                       <span className="sr-only"> for {t.name}</span>
+                    </Link>
+                    <Link to={`/admin/teachers/${t.id}/roster`} className="btn btn-ghost ad-btn-sm">
+                      {t.roster_size ? "CSV" : "Upload CSV"}
+                      <span className="sr-only"> roster for {t.name}</span>
                     </Link>
                   </td>
                 </tr>
@@ -155,9 +167,9 @@ export function TeacherList() {
       )}
 
       <p className="muted ad-small ad-quiet">
-        Privacy: the pilot-lead key can register teachers and upload rosters only. It cannot open attendance, meal or
-        voice-note records — those stay with each teacher. Consent turns to “Given” after the teacher reads the
-        data note on first login.
+        The school desk shows the class list you maintain and teacher login and logout hours. It does not open
+        children’s attendance, meals or voice notes. Consent turns to “Given” after the teacher reads the data note
+        on first login.
       </p>
     </div>
   );

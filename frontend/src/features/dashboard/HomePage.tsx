@@ -3,8 +3,10 @@ import { useAuth } from "../../auth";
 import { EmptyState, ErrorNote, Spinner } from "../../components/ui";
 import { addDays, isWorkingDay, monthKey, monthLabel, ymd } from "./dates";
 import { FollowUpPanel } from "./FollowUpPanel";
+import { GrainCard } from "./GrainCard";
 import { MdmCard } from "./MdmCard";
 import { Link } from "react-router-dom";
+import { DutyCard } from "./DutyCard";
 import { BackfillNudge, MonthStrip, PracticeNudge, TodayPanel } from "./HomeParts";
 import { RecordRow } from "./RecordRow";
 import { monthStats, needsCheck } from "./recordUtils";
@@ -75,7 +77,10 @@ export default function HomePage() {
         <>
           <TodayPanel classes={teacher.classes} records={todays} />
 
+          <DutyCard />
+
           <MdmCard />
+          <GrainCard />
 
           {data && missingYesterday.length > 0 ? <BackfillNudge date={yesterday} classes={missingYesterday} /> : null}
 

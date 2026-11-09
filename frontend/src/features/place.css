@@ -1,0 +1,37 @@
+.place-ring {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.place-ring svg {
+  display: block;
+}
+.place-ring-zone {
+  fill: var(--brand-soft);
+  stroke: var(--brand);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 6;
+}
+.place-ring-school {
+  fill: var(--brand);
+}
+.place-ring-here {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.place-ring-out {
+  fill: var(--block);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.place-ring figcaption {
+  margin: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-2);
+  max-width: 16rem;
+}

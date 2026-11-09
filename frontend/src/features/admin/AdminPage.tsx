@@ -5,6 +5,7 @@ import { Button } from "../../components/ui";
 import { KeyGate } from "./KeyGate";
 import { OnboardWizard } from "./OnboardWizard";
 import { TeacherList } from "./TeacherList";
+import { SchoolDesk } from "./SchoolDesk";
 import { TeacherRosterPage } from "./TeacherRosterPage";
 import { AdminCtx, isKeyRejected } from "./shared";
 import "./admin.css";
@@ -60,6 +61,7 @@ export default function AdminPage() {
             <NavLink to="/admin" end>
               Teachers
             </NavLink>
+            <NavLink to="/admin/school">School desk</NavLink>
             <NavLink to="/admin/onboard">Onboard</NavLink>
             <Link to="/stats">Impact</Link>
             <Button variant="ghost" className="ad-btn-sm" onClick={forget}>
@@ -77,6 +79,7 @@ export default function AdminPage() {
             {/* key={key} remounts children after a new key is saved, so lists refetch. */}
             <Routes key={key}>
               <Route index element={<TeacherList />} />
+              <Route path="school" element={<SchoolDesk />} />
               <Route path="onboard" element={<OnboardWizard />} />
               <Route path="teachers/:id/roster" element={<TeacherRosterPage />} />
               <Route path="*" element={<Navigate to="/admin" replace />} />

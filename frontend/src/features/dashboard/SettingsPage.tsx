@@ -21,6 +21,8 @@ export default function SettingsPage() {
         <dl className="db-kv">
           <dt>School</dt>
           <dd>{teacher.school.name}</dd>
+          <dt>School area</dt>
+          <dd>{teacher.school.boundary ? `${teacher.school.boundary.radius_m} m around the school` : "Not set yet"}</dd>
           <dt>State</dt>
           <dd>{teacher.school.state}</dd>
           {teacher.school.udise_code ? (
@@ -48,6 +50,8 @@ export default function SettingsPage() {
           <li>We keep only names and roll numbers you already write in the register. No photos or addresses.</li>
           <li>Voice recordings are deleted once the words are written down, within 24 hours at most.</li>
           <li>Registers use only records you confirmed. No student scores or comparisons between teachers.</li>
+          <li>Your head teacher sees the class list and the times you mark login and logout. Children’s attendance stays with you.</li>
+          <li>Location is read only when you mark login, logout or confirm a class record, to check the school area. The phone does not follow you through the day.</li>
           <li>Public numbers on the stats page are totals only and never show who you are.</li>
         </ul>
       </section>

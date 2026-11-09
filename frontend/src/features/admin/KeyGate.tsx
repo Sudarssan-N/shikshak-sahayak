@@ -27,8 +27,8 @@ export function KeyGate({ rejected, onSave }: { rejected: boolean; onSave: (key:
           <div>
             <h1>Pilot lead sign-in</h1>
             <p className="muted">
-              Paste the pilot-lead key you were given. It lets you register teachers and upload class rosters. It does
-              not show any attendance or meal records.
+              Paste the pilot-lead key you were given. It lets you register teachers, maintain class lists, set the school
+              area, and correct login and logout hours. It does not show children’s attendance or meal records.
             </p>
           </div>
           <div aria-live="assertive">

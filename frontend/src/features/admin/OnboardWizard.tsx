@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import type { AdminTeacher, Language, NewTeacher, RosterUploadResult } from "../../api/types";
+import type { AdminSchool, AdminTeacher, Language, NewTeacher, RosterUploadResult } from "../../api/types";
 import { Button, Card, ErrorNote } from "../../components/ui";
 import { RosterUpload } from "./RosterUpload";
 import { DoneStep } from "./DoneStep";
@@ -159,6 +159,13 @@ function ProfileStep({ onCreated }: { onCreated: (t: AdminTeacher, phone: string
   const [school, setSchool] = useState("");
   const [state, setState] = useState("");
   const [udise, setUdise] = useState("");
+  // "" = a new school. Otherwise the teacher joins a school already on the list, so the head teacher
+  // sees all its staff together and the grain store is shared.
+  const [schoolId, setSchoolId] = useState("");
+  const [schools, setSchools] = useState<AdminSchool[]>([]);
+  useEffect(() => {
+    api.adminSchools().then(setSchools).catch(() => setSchools([]));
+  }, []);
   const [rows, setRows] = useState<ClassRow[]>([{ key: 1, grade: "", section: "" }]);
   const nextKey = useRef(2);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -176,9 +183,9 @@ function ProfileStep({ onCreated }: { onCreated: (t: AdminTeacher, phone: string
     if (!phone.trim()) e.phone = "Enter the teacher’s mobile number.";
     else if (!normalisePhone(phone)) e.phone = "Enter a 10-digit Indian mobile number starting with 6, 7, 8 or 9.";
     if (!language) e.language = "Choose the language the teacher will speak in.";
-    if (school.trim().length < 2) e.school = "Enter the school name.";
-    if (!state) e.state = "Choose the state.";
-    if (udise.trim() && !/^\d{11}$/.test(udise.trim())) e.udise = "UDISE code is 11 digits. Leave empty if unknown.";
+    if (!schoolId && school.trim().length < 2) e.school = "Enter the school name.";
+    if (!schoolId && !state) e.state = "Choose the state.";
+    if (!schoolId && udise.trim() && !/^\d{11}$/.test(udise.trim())) e.udise = "UDISE code is 11 digits. Leave empty if unknown.";
     const filled = rows.filter((r) => r.grade);
     if (!filled.length) e.classes = "Add at least one class the teacher takes attendance for.";
     else if (rows.some((r) => !r.grade && r.section.trim())) e.classes = "Pick a grade for every row with a section.";
@@ -214,13 +221,12 @@ function ProfileStep({ onCreated }: { onCreated: (t: AdminTeacher, phone: string
       name: name.trim(),
       phone: digits,
       language: language as Language,
-      school_name: school.trim(),
-      state,
+      ...(schoolId ? { school_id: schoolId } : { school_name: school.trim(), state }),
       classes: rows
         .filter((r) => r.grade)
         .map((r) => ({ grade: Number(r.grade), section: r.section.trim() ? r.section.trim().toUpperCase() : null })),
     };
-    if (udise.trim()) body.udise_code = udise.trim();
+    if (!schoolId && udise.trim()) body.udise_code = udise.trim();
     setSaving(true);
     try {
       const t = await api.adminCreateTeacher(body);
@@ -297,6 +303,21 @@ function ProfileStep({ onCreated }: { onCreated: (t: AdminTeacher, phone: string
             ))}
           </select>
         </Field>
+        {schools.length ? (
+          <Field id="t-which" label="School" hint="Pick the school if a colleague is already on Shikshak Sahayak.">
+            <select id="t-which" className="input" value={schoolId} onChange={(e) => setSchoolId(e.target.value)}
+              aria-describedby="t-which-hint">
+              <option value="">A new school</option>
+              {schools.map((sc) => (
+                <option key={sc.id} value={sc.id}>
+                  {sc.name}, {sc.state}{sc.udise_code ? ` · UDISE ${sc.udise_code}` : ""} · {sc.teachers.length} teacher{sc.teachers.length === 1 ? "" : "s"}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
+        {schoolId ? null : (
+          <>
         <Field id="t-school" label="School name" error={show("school")}>
           <input
             id="t-school"
@@ -339,6 +360,8 @@ function ProfileStep({ onCreated }: { onCreated: (t: AdminTeacher, phone: string
             aria-describedby={show("udise") ? "t-udise-err" : "t-udise-hint"}
           />
         </Field>
+          </>
+        )}
       </div>
 
       <fieldset className="ad-fieldset" aria-describedby={show("classes") ? "t-classes-err" : "t-classes-hint"}>

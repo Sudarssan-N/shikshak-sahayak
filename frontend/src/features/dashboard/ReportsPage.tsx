@@ -8,7 +8,7 @@ import "./dashboard.css";
 
 const KINDS: { kind: ReportKind; title: string; fmt: string; desc: string }[] = [
   { kind: "attendance", title: "Attendance register", fmt: "XLSX", desc: "Month grid of every student by working day, with P / A marks and totals." },
-  { kind: "mdm", title: "MDM register", fmt: "XLSX", desc: "Per day and class: enrolled, present and meals served, with month totals." },
+  { kind: "mdm", title: "MDM register", fmt: "XLSX", desc: "Per day and class: enrolled, present, meals and food grain, plus what arrived and what is left." },
   { kind: "summary", title: "Monthly summary", fmt: "PDF", desc: "Working days, average attendance, total meals and lessons completed per class." },
   { kind: "csv", title: "Upload CSV", fmt: "CSV", desc: "One row per class per day, in the column order the portal or block office expects." },
 ];

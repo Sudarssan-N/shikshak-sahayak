@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { ApiError, api } from "../../api/client";
 import type { DailyRecord, Flag, Severity } from "../../api/types";
+import { useAuth } from "../../auth";
 import { Button, ErrorNote, SeverityBadge } from "../../components/ui";
+import { confirmAtSchool } from "../place";
 import { openFlags } from "./recordUtils";
 
 const RESOLUTION: Record<Flag["resolution"], string> = {
@@ -36,6 +38,7 @@ type OnUpdate = (r: DailyRecord, announce: string) => void;
 
 /** Confirm with Warn acknowledgement on the second tap; disabled while a Block flag is open. */
 export function ConfirmButton({ record, onUpdate }: { record: DailyRecord; onUpdate: OnUpdate }) {
+  const { teacher } = useAuth();
   const open = openFlags(record);
   const blocks = open.filter((f) => f.severity === "block").length;
   const warns = open.filter((f) => f.severity === "warn").length;
@@ -51,7 +54,7 @@ export function ConfirmButton({ record, onUpdate }: { record: DailyRecord; onUpd
     setBusy(true);
     setError(null);
     try {
-      onUpdate(await api.confirm(record.id, armed), "Record confirmed.");
+      onUpdate(await confirmAtSchool(record.id, armed, Boolean(teacher?.school.boundary)), "Record confirmed.");
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) setArmed(true);
       setError(e);
@@ -74,6 +77,11 @@ export function ConfirmButton({ record, onUpdate }: { record: DailyRecord; onUpd
       <Button block loading={busy} disabled={blocks > 0} onClick={() => void confirm()}>
         {armed ? "Yes, confirm anyway" : "Confirm record"}
       </Button>
+      {teacher?.school.boundary && blocks === 0 ? (
+        <p className="muted" style={{ margin: 0 }}>
+          Your location is checked once, against the school area.
+        </p>
+      ) : null}
       <ErrorNote error={error} />
     </div>
   );

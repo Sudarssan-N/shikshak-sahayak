@@ -181,8 +181,11 @@
   color: var(--text-2);
 }
 .ad-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
   text-align: right;
-  white-space: nowrap;
 }
 .ad-raw {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -513,3 +516,90 @@
   line-height: 1.45;
   resize: vertical;
 }
+
+/* School desk */
+.ad-desk {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.ad-boundary {
+  grid-row: span 2;
+}
+.ad-desk-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.ad-boundary input[type="range"] {
+  width: 100%;
+  accent-color: var(--brand);
+}
+.ad-people-add {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.ad-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ad-people li {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.ad-roll {
+  font-weight: 700;
+}
+.ad-hours-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+@media (max-width: 860px) {
+  .ad-desk {
+    grid-template-columns: 1fr;
+  }
+  .ad-boundary {
+    grid-row: auto;
+  }
+  .ad-people-add {
+    grid-template-columns: 1fr;
+  }
+  .ad-table-cards .ad-actions {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 520px) {
+  .ad-people li {
+    grid-template-columns: 42px 1fr;
+  }
+  .ad-people li .btn,
+  .ad-people li .row {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* Missed logouts: shown whatever the date range, so "today" never hides them. */
+.ad-missed {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+.ad-missed p { margin: 0 0 6px; }
+.ad-missed ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ad-missed li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
