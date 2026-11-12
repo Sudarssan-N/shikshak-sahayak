@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, RequireTeacher } from "./auth";
 import { TeacherLayout } from "./components/TeacherLayout";
 import LoginPage from "./features/capture/LoginPage";
+import SignupPage from "./features/capture/SignupPage";
 import WelcomePage from "./features/capture/WelcomePage";
 import RecordPage from "./features/capture/RecordPage";
 import HomePage from "./features/dashboard/HomePage";
@@ -20,6 +21,7 @@ export default function App() {
         <Routes>
           {/* public */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/admin/*" element={<AdminPage />} />
           {/* teacher, first run */}

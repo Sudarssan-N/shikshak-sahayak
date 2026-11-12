@@ -56,3 +56,20 @@ def new_code() -> str:
 
 def code_hash(code: str) -> str:
     return hashlib.sha256(("code:" + config.SECRET_KEY + code).encode()).hexdigest()
+
+
+def hash_pin(pin: str) -> str:
+    salt = secrets.token_bytes(16)
+    dk = hashlib.scrypt(pin.encode(), salt=salt, n=2**14, r=8, p=1)
+    return f"s1${salt.hex()}${dk.hex()}"
+
+
+def check_pin(pin: str, stored: str | None) -> bool:
+    if not stored:
+        return False
+    try:
+        _, salt, dk = stored.split("$")
+        got = hashlib.scrypt(pin.encode(), salt=bytes.fromhex(salt), n=2**14, r=8, p=1)
+    except ValueError:
+        return False
+    return hmac.compare_digest(got.hex(), dk)

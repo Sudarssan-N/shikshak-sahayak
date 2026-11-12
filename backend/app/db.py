@@ -51,6 +51,10 @@ class Teacher(Base):
     consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     pseudo_id: Mapped[str] = mapped_column(String(16), default=uid)  # random, for public counters only
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # Optional 6-digit PIN login (self-signup). Salted scrypt hash; lockout after repeated wrong PINs.
+    pin_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    pin_fails: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    pin_locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     school: Mapped[School] = relationship()
     classes: Mapped[list["ClassSection"]] = relationship(back_populates="teacher", cascade="all, delete-orphan",

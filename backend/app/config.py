@@ -21,6 +21,9 @@ DATABASE_URL = _env("DATABASE_URL", f"sqlite:///{DATA_DIR / 'shikshak.db'}")
 # Real teachers never get their code in the API response; OTP delivery for them is a separate channel.
 DEMO_PHONES = {p.strip() for p in _env("DEMO_PHONES").split(",") if p.strip()}
 
+# Self-signup (name + phone + 6-digit PIN). Phone numbers are not verified by SMS, so this is for the demo/pilot only.
+ALLOW_SIGNUP = _env("ALLOW_SIGNUP", "1") == "1"
+
 # Dropout early-warning thresholds (see followup.py for where the defaults come from).
 FOLLOWUP_STREAK_MIN = int(_env("FOLLOWUP_STREAK_MIN", "3"))
 FOLLOWUP_ACT_PCT = int(_env("FOLLOWUP_ACT_PCT", "80"))

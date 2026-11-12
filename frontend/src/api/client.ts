@@ -98,6 +98,10 @@ export const api = {
   // auth
   requestCode: (phone: string) =>
     request<{ sent: boolean; dev_code?: string }>("/api/auth/request-code", { method: "POST", body: json({ phone }) }),
+  signup: (name: string, phone: string, pin: string) =>
+    request<{ token: string; teacher: Teacher }>("/api/auth/signup", { method: "POST", body: json({ name, phone, pin }) }),
+  loginPin: (phone: string, pin: string) =>
+    request<{ token: string; teacher: Teacher }>("/api/auth/login-pin", { method: "POST", body: json({ phone, pin }) }),
   verify: (phone: string, code: string) =>
     request<{ token: string; teacher: Teacher }>("/api/auth/verify", { method: "POST", body: json({ phone, code }) }),
   me: () => request<Teacher>("/api/me"),

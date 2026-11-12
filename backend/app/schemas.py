@@ -36,6 +36,17 @@ class PhoneIn(BaseModel):
     phone: str
 
 
+class SignupIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    phone: str
+    pin: str = Field(pattern=r"^\d{6}$")
+
+
+class PinLoginIn(BaseModel):
+    phone: str
+    pin: str = Field(pattern=r"^\d{6}$")
+
+
 class VerifyIn(BaseModel):
     phone: str
     code: str

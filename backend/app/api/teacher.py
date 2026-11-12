@@ -1,4 +1,5 @@
 """Teacher-facing routes: login by one-time code, capture, records, reports, delete-my-data."""
+import csv
 import logging
 from datetime import date, timedelta
 from pathlib import Path
@@ -9,11 +10,13 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from .. import config, geo, service, speech
-from ..db import (Correction, DailyRecord, DutySession, FollowUpAction, GrainMovement, LearningLevel, LoginCode,
-                  Report, Student, StudentContact, Teacher, UsageEvent, ValidationFlag, VoiceNote, get_db, now)
+from ..db import (ClassSection, Correction, DailyRecord, DutySession, FollowUpAction, GrainMovement, LearningLevel, LoginCode,
+                  Report, School, Student, StudentContact, Teacher, UsageEvent, ValidationFlag, VoiceNote, get_db, now)
 from ..reports import generate as reports
-from ..schemas import ConfirmIn, CorrectionIn, PhoneIn, PlaceIn, ReportIn, ResolveNameIn, TimeSavedIn, VerifyIn
-from ..security import code_hash, make_token, new_code, normalize_phone, phone_hash, valid_phone
+from ..schemas import (ConfirmIn, CorrectionIn, PhoneIn, PinLoginIn, PlaceIn, ReportIn, ResolveNameIn, SignupIn,
+                       TimeSavedIn, VerifyIn)
+from ..security import (check_pin, code_hash, encrypt_name, hash_pin, make_token, new_code, normalize_phone, phone_hash,
+                        valid_phone)
 from .deps import current_teacher, own_record
 
 router = APIRouter(prefix="/api")
@@ -56,6 +59,61 @@ def verify(body: VerifyIn, db: Session = Depends(get_db)):
         raise HTTPException(401, "That code didn't match. Please check and try again.")
     lc.used = True
     t = db.scalars(select(Teacher).where(Teacher.phone_hash == ph)).one()
+    db.commit()
+    return {"token": make_token(t.id), "teacher": service.ser_teacher(db, t)}
+
+
+DEMO_SCHOOL = ("Primary School Rampur (demo)", "Uttar Pradesh")
+WEAK_PINS = {"000000", "111111", "123456", "654321", "121212", "112233"}
+PIN_MAX_FAILS, PIN_LOCK_MIN = 5, 15
+
+
+@router.post("/auth/signup")
+def signup(body: SignupIn, db: Session = Depends(get_db)):
+    """Self-signup for the demo: name + phone + 6-digit PIN. Joins the demo school (classes 3 and 5) with the sample
+    roster so capture works straight away. Numbers already on file can't be claimed this way."""
+    if not config.ALLOW_SIGNUP:
+        raise HTTPException(403, "Sign-up is closed. Please ask your pilot lead to add you.")
+    if not valid_phone(body.phone):
+        raise HTTPException(422, "Please enter a 10-digit mobile number.")
+    if body.pin in WEAK_PINS or len(set(body.pin)) == 1:
+        raise HTTPException(422, "That PIN is too easy to guess. Please choose a different 6-digit PIN.")
+    ph = phone_hash(body.phone)
+    if db.scalars(select(Teacher).where(Teacher.phone_hash == ph)).first():
+        raise HTTPException(409, "This number is already registered. Please log in instead.")
+    school = db.scalars(select(School).where(School.name == DEMO_SCHOOL[0])).first() \
+        or School(name=DEMO_SCHOOL[0], state=DEMO_SCHOOL[1])
+    t = Teacher(name=body.name.strip(), phone_hash=ph, phone_last4=normalize_phone(body.phone)[-4:], language="hi",
+                school=school, pin_hash=hash_pin(body.pin))
+    t.classes = [ClassSection(grade=3), ClassSection(grade=5)]
+    by_grade = {k.grade: k for k in t.classes}
+    with open(config.ROOT / "scripts" / "sample_roster.csv", encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            k = by_grade.get(int(row["grade"]))
+            if k is not None:
+                k.students.append(Student(roll_no=int(row["roll_no"]), name_enc=encrypt_name(row["name"].strip())))
+    db.add(t)
+    db.commit()
+    return {"token": make_token(t.id), "teacher": service.ser_teacher(db, t)}
+
+
+@router.post("/auth/login-pin")
+def login_pin(body: PinLoginIn, db: Session = Depends(get_db)):
+    bad = HTTPException(401, "That number or PIN didn't match. Please check and try again.")
+    t = db.scalars(select(Teacher).where(Teacher.phone_hash == phone_hash(body.phone))).first()
+    if t is None or not t.pin_hash:
+        check_pin(body.pin, hash_pin("000000"))  # keep timing similar for unknown numbers
+        raise bad
+    locked = t.pin_locked_until
+    if locked is not None and locked.replace(tzinfo=locked.tzinfo or now().tzinfo) > now():
+        raise HTTPException(429, "Too many wrong PINs. Please wait 15 minutes, or log in with an SMS code.")
+    if not check_pin(body.pin, t.pin_hash):
+        t.pin_fails = (t.pin_fails or 0) + 1
+        if t.pin_fails >= PIN_MAX_FAILS:
+            t.pin_fails, t.pin_locked_until = 0, now() + timedelta(minutes=PIN_LOCK_MIN)
+        db.commit()
+        raise bad
+    t.pin_fails, t.pin_locked_until = 0, None
     db.commit()
     return {"token": make_token(t.id), "teacher": service.ser_teacher(db, t)}
 

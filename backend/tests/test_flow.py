@@ -656,3 +656,25 @@ def test_forgotten_logout_is_closed_not_counted(c, teacher):
     assert fixed["hours"] == 6 and fixed["edited"]
     assert c.get("/admin/duty", headers=ADMIN, params={"school_id": sid}).json()["missed"] == []
     c.delete(f"/admin/schools/{sid}/boundary", headers=ADMIN)
+
+
+def test_signup_and_pin_login(c, monkeypatch):
+    from app import config
+    monkeypatch.setattr(config, "ALLOW_SIGNUP", True)
+    body = {"name": "New Teacher", "phone": "9123456780", "pin": "482916"}
+    assert c.post("/api/auth/signup", json={**body, "pin": "123456"}).status_code == 422  # weak
+    assert c.post("/api/auth/signup", json={**body, "pin": "12ab56"}).status_code == 422  # not digits
+    r = c.post("/api/auth/signup", json=body)
+    assert r.status_code == 200 and r.json()["teacher"]["name"] == "New Teacher"
+    h = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert c.get("/api/me", headers=h).status_code == 200
+    assert c.get("/api/roster", headers=h).json()  # sample roster loaded
+    assert c.post("/api/auth/signup", json=body).status_code == 409  # number taken
+    ok = c.post("/api/auth/login-pin", json={"phone": "+91 91234 56780", "pin": "482916"})
+    assert ok.status_code == 200 and ok.json()["token"]
+    for _ in range(5):
+        assert c.post("/api/auth/login-pin", json={"phone": "9123456780", "pin": "000001"}).status_code == 401
+    assert c.post("/api/auth/login-pin", json={"phone": "9123456780", "pin": "482916"}).status_code == 429  # locked
+    assert c.post("/api/auth/login-pin", json={"phone": "9000000001", "pin": "482916"}).status_code == 401  # unknown
+    monkeypatch.setattr(config, "ALLOW_SIGNUP", False)
+    assert c.post("/api/auth/signup", json={**body, "phone": "9123456781"}).status_code == 403

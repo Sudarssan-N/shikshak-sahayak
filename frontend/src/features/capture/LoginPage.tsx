@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../auth";
 import { Button } from "../../components/ui";
@@ -23,9 +23,10 @@ export default function LoginPage() {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
 
-  const [step, setStep] = useState<"phone" | "code">("phone");
+  const [step, setStep] = useState<"pin" | "phone" | "code">("pin");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
+  const [pin, setPin] = useState("");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +71,27 @@ export default function LoginPage() {
     }
   }
 
+  async function loginWithPin(e: FormEvent) {
+    e.preventDefault();
+    if (!phoneOk || pin.length !== 6 || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { token, teacher: t } = await api.loginPin(phone, pin);
+      setSession(token, t);
+      navigate(t.consent_at ? from || "/" : "/welcome", { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 401
+          ? "That number or PIN didn't match. If you haven't set a PIN, use an SMS code instead."
+          : friendlyError(err),
+      );
+      setPin("");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function verify(value = code) {
     if (value.length !== 6 || busy) return;
     setBusy(true);
@@ -94,6 +116,65 @@ export default function LoginPage() {
   return (
     <div className="cap-screen">
       <Brand />
+
+      {step === "pin" ? (
+        <form className="cap-panel stack" onSubmit={loginWithPin} noValidate>
+          <h1>Log in</h1>
+          <p className="muted">
+            Enter your mobile number and 6-digit PIN. <span lang="hi">अपना मोबाइल नंबर और पिन डालें।</span>
+          </p>
+          <div className="field">
+            <label htmlFor="phone">Mobile number</label>
+            <div className="cap-phone">
+              <span className="cap-phone-cc" aria-hidden>
+                +91
+              </span>
+              <input
+                id="phone"
+                className="input cap-input-lg num"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                placeholder="98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(normalisePhone(e.target.value))}
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="pin">6-digit PIN</label>
+            <input
+              id="pin"
+              className="input cap-code num"
+              type="password"
+              inputMode="numeric"
+              autoComplete="current-password"
+              maxLength={6}
+              placeholder="••••••"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? "login-error" : undefined}
+            />
+          </div>
+          {error ? (
+            <p id="login-error" className="error-note" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button type="submit" block loading={busy} disabled={!phoneOk || pin.length !== 6}>
+            Log in
+          </Button>
+          <div className="row cap-split">
+            <Button type="button" variant="ghost" onClick={() => { setStep("phone"); setError(null); }}>
+              Use SMS code instead
+            </Button>
+            <Link to="/signup" className="cap-linkbtn">
+              Create account
+            </Link>
+          </div>
+        </form>
+      ) : null}
 
       {step === "phone" ? (
         <form className="cap-panel stack" onSubmit={sendCode} noValidate>
@@ -124,7 +205,9 @@ export default function LoginPage() {
           {notRegistered ? (
             <div className="cap-callout" role="alert">
               <strong>This number isn't registered yet.</strong>
-              <p>Please contact your pilot lead to add you. Once they do, come back and log in with the same number.</p>
+              <p>
+                Please contact your pilot lead to add you, or <Link to="/signup">create an account</Link> yourself.
+              </p>
             </div>
           ) : null}
           {error ? (
@@ -135,8 +218,13 @@ export default function LoginPage() {
           <Button type="submit" block loading={busy} disabled={!phoneOk}>
             Send code
           </Button>
+          <Button type="button" variant="ghost" onClick={() => { setStep("pin"); setError(null); setNotRegistered(false); }}>
+            Use PIN instead
+          </Button>
         </form>
-      ) : (
+      ) : null}
+
+      {step === "code" ? (
         <form
           className="cap-panel stack"
           onSubmit={(e) => {
@@ -191,7 +279,7 @@ export default function LoginPage() {
             </Button>
           </div>
         </form>
-      )}
+      ) : null}
     </div>
   );
 }
