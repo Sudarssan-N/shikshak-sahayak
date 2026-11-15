@@ -154,12 +154,40 @@ function Dashboard({ stats, stale }: { stats: Stats; stale: string | null }) {
         </p>
       ) : null}
 
+      {stats.pilot_partners?.length ? (
+        <section className="st-card st-partners" aria-labelledby="st-h-partners">
+          <div className="st-card-head">
+            <h2 id="st-h-partners">Pilot partners</h2>
+            <p className="muted">Organisations bringing teachers to the pilot</p>
+          </div>
+          <ul className="st-partner-list">
+            {stats.pilot_partners.map((p) => (
+              <li key={p.name}>
+                <p className="st-partner-name">
+                  <a href={p.url} target="_blank" rel="noreferrer">
+                    {p.name}
+                  </a>
+                  <span className="st-tag">{p.status}</span>
+                </p>
+                <p className="muted st-partner-meta">
+                  {p.location} · {p.about}
+                </p>
+                <p className="st-partner-detail">{p.detail}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="muted st-partner-note">
+            A partnership is not usage. The counters below count only teachers who have signed up and confirmed records.
+          </p>
+        </section>
+      ) : null}
+
       <section aria-labelledby="st-h-headline">
         <h2 id="st-h-headline" className="sr-only">
           Headline numbers
         </h2>
         <ul className="st-tiles">
-          <Tile label="Teachers onboarded" value={fmtN(stats.teachers_onboarded)} sub="Registered by a pilot lead" />
+          <Tile label="Teachers onboarded" value={fmtN(stats.teachers_onboarded)} sub="Signed up and gave consent" />
           <Tile
             label="Active teachers"
             value={fmtN(stats.teachers_active)}
@@ -256,6 +284,11 @@ function Dashboard({ stats, stale }: { stats: Stats; stale: string | null }) {
             {stats.teachers_onboarded === 1 ? "teacher" : "teachers"} onboarded,{" "}
             <span className="num">{fmtN(stats.teachers_active)}</span> active, with activity on{" "}
             <span className="num">{activeDays}</span> of the last 30 days. This is a small pilot; we do not extrapolate it.
+          </li>
+          <li>
+            <strong>Who counts:</strong> anyone who signs up and accepts the consent screen counts as onboarded, so
+            reviewers trying the app can appear here too. The shared demo account never counts.{" "}
+            <strong>Active</strong> (3+ confirmed records) is the figure that reflects real classroom use.
           </li>
           <li>
             <strong>Privacy:</strong> these are totals only. They contain no student or teacher names, no phone numbers

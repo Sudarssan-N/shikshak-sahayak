@@ -13,6 +13,20 @@ from ..security import phone_hash
 
 router = APIRouter()
 
+# Partner organisations, stated as they stand. Not a usage count: teacher numbers come only from the database.
+PILOT_PARTNERS = [
+    {
+        "name": "Ashraya",
+        "url": "https://ashrayaconnect.org",
+        "location": "Bengaluru, Karnataka",
+        "about": "Runs Ashraya Shiksha Sarthi: 30+ learning centres and libraries, 5,000+ children (per ashrayaconnect.org).",
+        "status": "Agreed to pilot",
+        "detail": "Agreed to pilot Shikshak Sahayak with teachers at its centres. Onboarding and testing are in "
+                  "progress; teacher accounts will appear in the counters above as they sign up.",
+        "since": "2026-11",
+    },
+]
+
 
 @router.get("/health")
 def health():
@@ -64,6 +78,7 @@ def stats(db: Session = Depends(get_db)):
         "daily": [{"day": d.isoformat(), "notes": notes_by_day[d], "confirmed": conf_by_day[d]} for d in days],
         "updated_at": now().isoformat(),
         "excludes_demo_account": bool(demo),
+        "pilot_partners": PILOT_PARTNERS,
     }
 
 

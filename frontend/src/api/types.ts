@@ -243,6 +243,17 @@ export interface Stats {
   languages: Record<string, number>; // notes per language
   daily: { day: string; notes: number; confirmed: number }[]; // last 30 days
   updated_at: string;
+  pilot_partners?: PilotPartner[];
+}
+
+export interface PilotPartner {
+  name: string;
+  url: string;
+  location: string;
+  about: string;
+  status: string;
+  detail: string;
+  since: string;
 }
 
 /** Dropout early-warning: a child with a run of absences or low attendance in the last 30 days. */
