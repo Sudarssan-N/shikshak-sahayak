@@ -253,5 +253,5 @@ export const api = {
     request<DutySession>(`/admin/duty/${id}`, { method: "PATCH", body: json(body) }, true),
 
   // public
-  stats: () => request<Stats>("/stats"),
+  stats: () => request<Stats>("/api/stats", { cache: "no-store" }),
 };

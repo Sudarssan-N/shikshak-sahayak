@@ -39,8 +39,13 @@ if (config.FRONTEND_DIST / "index.html").exists():
         # /stats and /admin are both JSON APIs and SPA pages: a browser navigation (Accept: text/html) gets the app.
         if request.method == "GET" and "text/html" in request.headers.get("accept", "") \
                 and not request.url.path.startswith(("/api/", "/assets/", "/docs", "/openapi")):
-            return FileResponse(config.FRONTEND_DIST / "index.html")
-        return await call_next(request)
+            res = FileResponse(config.FRONTEND_DIST / "index.html", headers={"Cache-Control": "no-cache"})
+        else:
+            res = await call_next(request)
+        # The same URL (/stats, /admin) returns HTML or JSON by Accept: caches must key on it.
+        if not request.url.path.startswith("/assets/"):
+            res.headers["Vary"] = "Accept"
+        return res
 
     app.mount("/assets", StaticFiles(directory=config.FRONTEND_DIST / "assets"), name="assets")
 

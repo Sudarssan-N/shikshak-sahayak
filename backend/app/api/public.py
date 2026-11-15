@@ -34,6 +34,7 @@ def health():
 
 
 @router.get("/stats")
+@router.get("/api/stats")  # unambiguous JSON path for the page; /stats is also the SPA route for browsers
 def stats(db: Session = Depends(get_db)):
     # The public demo account (config.DEMO_PHONES) is fictional: it never counts as impact.
     demo = db.scalars(select(Teacher).where(Teacher.phone_hash.in_(
